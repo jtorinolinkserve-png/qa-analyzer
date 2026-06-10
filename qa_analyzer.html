@@ -564,41 +564,61 @@ async function separateSpeakers(rawTranscript) {
       'Authorization': 'Bearer ' + groqKey
     },
     body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      max_tokens: 1800,
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 2200,
       temperature: 0.1,
       messages: [
         {
           role: 'system',
-          content: `You are cleaning a call transcript for a QA review.
+          content: `You are reviewing an outbound telemarketing call transcript for QA.
 
-This is an outbound telemarketing survey.
+First determine the call type:
 
-CALLER = the agent doing the survey.
-PROSPECT = the person being called.
+1. LIVE_CONVERSATION
+2. ANSWERING_MACHINE
+3. DEAD_AIR
+4. UNCLEAR_AUDIO
 
-The CALLER usually:
+Important rules:
+- If only one voice is present, classify as ANSWERING_MACHINE or DEAD_AIR.
+- Do NOT invent prospect responses.
+- Do NOT create a conversation if only one side is audible.
+- Correct obvious speaker-labeling errors.
+
+CALLER usually:
 - introduces the call
 - asks survey or qualification questions
 - verifies name, age, DOB, address, zip code, phone number
 - explains next steps
 - closes the call
 
-The PROSPECT usually:
+PROSPECT usually:
 - answers questions
 - asks for clarification
 - gives objections
 - confirms or refuses information
 
-Do not rely only on punctuation.
-Use conversation flow.
+If a PROSPECT line contains verification questions, Medicare qualification questions, age/DOB questions, address verification, phone verification, or closing statements, it is likely the CALLER and should be corrected.
 
-Return only the transcript in this format:
+Return only this format:
+
+CALL_TYPE: LIVE_CONVERSATION
+RELIABILITY: HIGH / MEDIUM / LOW
 
 CALLER: ...
 PROSPECT: ...
+
+If answering machine:
+
+CALL_TYPE: ANSWERING_MACHINE
+RELIABILITY: LOW
+
 CALLER: ...
-PROSPECT: ...`
+
+If dead air:
+
+CALL_TYPE: DEAD_AIR
+RELIABILITY: LOW`
         },
         {
           role: 'user',
@@ -686,6 +706,33 @@ Return ONLY valid JSON.`
 
 TRANSCRIPT:
 ${ST.transcript}
+IMPORTANT:
+
+If the transcript contains:
+
+CALL_TYPE: ANSWERING_MACHINE
+
+Return:
+
+{
+  "scores":{
+    "opening":0,
+    "tone":0,
+    "probing":0,
+    "script":0,
+    "objections":0,
+    "closing":0,
+    "compliance":0,
+    "callflow":0
+  },
+  "dnq_flags":[],
+  "callback_flags":["Answering Machine"],
+  "geo_flags":[],
+  "feedback":"Voicemail reached. No live conversation occurred.",
+  "action_plan":"N/A"
+}
+
+Do not perform QA scoring.
 
 CAMPAIGN: ${campName}
 ${geoFocus?'GEO: Only covers: '+geoFocus+'. Flag if clearly outside. Give benefit of doubt for unfamiliar city names.':''}
@@ -767,9 +814,14 @@ function showTranscript() {
     (campName && campName !== '— Select campaign —' ? `<span class="chip">📢 ${campName}</span>` : '') +
     `<span class="chip">🕐 ${new Date().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}</span>`;
 
-  const lines = ST.transcript.split(/\n+/).filter(Boolean);
+const lines = ST.transcript.split(/\n+/).filter(Boolean);
 
-  document.getElementById('txBox').innerHTML = lines.map(line => {
+const filteredLines = lines.filter(line =>
+  !line.startsWith('CALL_TYPE:') &&
+  !line.startsWith('RELIABILITY:')
+);
+
+document.getElementById('txBox').innerHTML = filteredLines.map(line => {
     const isCaller = line.trim().toUpperCase().startsWith('CALLER:');
     const isProspect = line.trim().toUpperCase().startsWith('PROSPECT:');
 
