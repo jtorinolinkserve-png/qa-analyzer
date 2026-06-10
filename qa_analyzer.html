@@ -566,7 +566,7 @@ async function separateSpeakers(rawTranscript) {
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       max_tokens: 2200,
-      temperature: 0.1,
+      temperature: 0,
       messages: [
         {
           role: 'system',
@@ -584,7 +584,28 @@ Important rules:
 - Do NOT invent prospect responses.
 - Do NOT create a conversation if only one side is audible.
 - Correct obvious speaker-labeling errors.
+Preserve the original conversation flow.
 
+Do NOT summarize.
+
+Do NOT combine multiple caller statements into one block.
+
+Do NOT combine multiple prospect responses into one block.
+
+Keep every speaker turn separate and in chronological order.
+
+Example:
+
+CALLER: Hello, may I speak with John?
+PROSPECT: This is John.
+
+CALLER: Are you on Medicare?
+PROSPECT: Yes.
+
+CALLER: Are you married?
+PROSPECT: Yes.
+
+Maintain this format throughout the entire transcript.
 CALLER usually:
 - introduces the call
 - asks survey or qualification questions
