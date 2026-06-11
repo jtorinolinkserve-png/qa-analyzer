@@ -668,244 +668,109 @@ RELIABILITY: LOW`
   const data = await res.json();
   return data.choices[0].message.content.trim();
 }
-  async function generateNotes(transcript, surveyType) {
+// ─── REPLACEMENT: generateNotes ───────────────────────────────────────────────
+// Drop-in replacement. Same signature, same call site — just swap the whole
+// function in your HTML file. Changes:
+//   1. Model upgraded 8b-instant → llama-3.3-70b-versatile (rule-dense task)
+//   2. Prompt deduplicated and restructured into a strict rule order
+//   3. Canonical phrase library added — model must copy phrasing, not paraphrase
+//   4. Explicit "assumptive question = confirmation" rule for MedSupp
+//   5. Hardened agreement rule (passive acknowledgment ≠ agreement)
 
+async function generateNotes(transcript, surveyType) {
   const res = await fetch(
     'https://api.groq.com/openai/v1/chat/completions',
     {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':'Bearer '+groqKey
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + groqKey
       },
-      body:JSON.stringify({
-        model:'llama-3.1-8b-instant',
-        temperature:0.1,
-        max_tokens:400,
-        messages:[
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0,
+        max_tokens: 300,
+        messages: [
           {
-            role:'system',
-            content:`Generate professional telemarketing notes.
+            role: 'system',
+            content: `You write telemarketing lead sheet notes, exactly as a caller would type them into a lead sheet. You do NOT summarize the call.
 
-You are writing notes exactly as a telemarketing caller would enter them into a lead sheet.
+OUTPUT FORMAT
+- Return ONLY the notes paragraph. No preamble, no labels, no quotes.
+- 1 to 4 short sentences. Two spaces after every sentence.
+- Start with the prospect's first name.
+- Paragraph format, plain sentences. No database-style formatting.
 
-Your goal is NOT to summarize the call.
-Your goal is to create concise lead sheet notes.
-The lead must always be written about the prospect who qualifies for the campaign.
-For Medicare campaigns, the prospect is usually the Medicare-eligible individual being discussed, even if a spouse answered the phone.
+SUBJECT
+- The notes are always about the Medicare-eligible prospect, even if a spouse answered the phone.
+- Mention the spouse only when the spouse provided qualification information about the prospect, or has their own relevant coverage.
+- Never state marital status separately when "husband", "wife", or "spouse" already implies it.
 
-Do not assume the person speaking is the prospect.
-Determine who the campaign qualification information belongs to.
-If a spouse answers the phone on behalf of the prospect, write the notes about the prospect, not the spouse.
-When referencing a spouse, do not separately state marital status if it is already implied by husband, wife, or spouse.
-The spouse should only be mentioned when providing information about the prospect.
-Never convert a refusal into a fact.
+COVERAGE WORDING — MEDSUPP (follow in this exact priority order)
+1. If the caller asked an assumptive question such as "I am assuming you have a Medicare Supplement program, is that correct?" and the prospect answered yes (or any affirmative), the Medicare Supplement IS CONFIRMED. Write "Medicare Supplement".
+2. If Medicare Advantage / HMO / PPO was explicitly confirmed, write "Medicare Advantage plan".
+3. Write "secondary insurance" ONLY when the prospect confirmed having secondary coverage but the call never established whether it is a Supplement or Advantage plan. If rule 1 or 2 applies, you must NOT use "secondary insurance".
 
-Examples:
+CARRIER NAMES — use these exact spellings
+- "AARP through United Healthcare" (never "UnitedHealthcare" in notes)
+- "Blue Cross Blue Shield", "Mutual of Omaha", "Bankers Life", "Colonial Penn"
 
-Prospect refuses to provide spouse information:
-Write:
-"Refused to disclose spouse information."
+AGE AND YEAR OF BIRTH
+- Always age first, then year of birth: "is 71 years old and was born 1954".
+- Never estimate, calculate, or infer age, year of birth, coverage type, carrier, marital status, smoking status, or employment status.
+- If only an age range was confirmed, copy the range exactly: "is over 65 years old but not over 85 years old".
 
-Do not write:
-"Spouse has different coverage."
-"Spouse is with another company."
-"Spouse is not on Medicare."
+CANONICAL PHRASES — when the situation occurs, copy the sentence exactly (adjust pronouns only)
+- Prospect unsure of spouse's coverage → "He is not sure of his wife's coverage." / "She is not sure of her husband's coverage."
+- Prospect refused spouse information → "Refused to disclose spouse information."
+- Refused carrier name → "refused to disclose what company she has it with"
+- Follow-up agreed → "Agreed to receive a call from our Medicare specialist." or "Agreed to receive a call from our Life specialist."
+Never reword these. Never write "He agreed to receive..." — the sentence starts with "Agreed".
 
-unless explicitly stated in the call.
-Do not write:
-"Refused to provide further information."
-"Please do not contact him again."
-"Declined participation."
+REFUSALS
+- Never convert a refusal into a fact. If spouse info was refused, do not write that the spouse has different coverage, another company, or is not on Medicare.
+- Do not document objections, irritation, "don't call me again", or declined participation unless the campaign requires it.
 
-unless specifically required by the campaign.
-Never explain what was or was not discussed.
-Do not write:
-"Refused to provide further information."
-"Please do not contact him again."
-"Declined participation."
+NEVER INCLUDE
+- Address, phone number, zip code, verification steps.
+- Statements about missing information or what was not discussed.
+- Observations about the conversation itself.
 
-unless specifically required by the campaign.
-Never mention verification steps.
-Never mention addresses.
-Never mention phone numbers.
-Never mention missing information.
-Never estimate or infer age, year of birth, coverage type, marital status, smoking status, employment status, or carrier information.
+FOLLOW-UP / AGREEMENT RULE (strict)
+- Add the "Agreed to receive a call..." sentence ONLY if the prospect gave an explicit, affirmative response directly to the follow-up offer (e.g. "yes", "okay, that's fine", "sure").
+- The caller announcing that a specialist will call is NOT agreement.
+- A passive "uh-huh", "mhm", silence, or the prospect simply not objecting is NOT agreement.
+- If agreement was not explicit, end the notes WITHOUT any closing sentence. Do not substitute any other closing line.
 
-If exact information is not provided, use only the information explicitly stated in the call.
+CAMPAIGN-SPECIFIC
+- MedSupp: focus on Medicare coverage per the coverage wording rules above. Include spouse coverage only if discussed.
+- T65: include working status, smoking status, and coverage if discussed.
+- Life: include carrier, benefit amount, and policy type if known.
 
-Examples:
-- If the prospect only confirms being over 65 but not over 85, write:
-  "is over 65 years old but not over 85 years old"
-
-- Do NOT write:
-  "is 70 years old and was born 1955"
-Never write observations about the conversation.
-
-Output only the final lead sheet notes.
-
-Generate professional telemarketing notes.
-
-You are writing notes exactly as a telemarketing caller would enter them into a lead sheet.
-
-Your goal is NOT to summarize the call.
-Your goal is to create concise lead sheet notes.
-
-Always begin the notes with the prospect's first name.
-
-The lead must always be written about the prospect who qualifies for the campaign.
-
-The primary subject of the notes must be the prospect, even if another person answered the phone.
-
-RULES:
-- Use paragraph format.
-- Use two spaces after every sentence.
-- Include age and year of birth.
-- Include spouse information if applicable.
-- Include carrier information.
-- Use "Medicare Supplement plan" only if explicitly confirmed.
-- Use "Medicare Advantage plan" only if explicitly confirmed.
-- If plan type is not confirmed, use "secondary insurance".
-Do not document objections, refusals, irritations, or requests not to be contacted unless specifically required for qualification.
-
-Focus only on information useful to the specialist.
-Do not document objections, refusals, irritations, or requests not to be contacted unless specifically required for qualification.
-
-Focus only on information useful to the specialist.
-Only include information that would normally be entered in a lead sheet.
-
-DO NOT include:
-- Address
-- Phone number
-- Zip code
-- Verification information
-- Marital status unless relevant to qualification
-- Employment status unless relevant to qualification
-- Smoking status unless relevant to qualification
-
-Keep notes concise and similar to a telemarketing lead sheet entry.
-              
-Always write age before year of birth.
-If the prospect refuses to provide an exact age or year of birth:
-
-- Do not estimate.
-- Do not calculate.
-- Do not infer.
-
-Use only the age information explicitly confirmed during the call.
-
-Example:
-
-Prospect confirms:
-"Over 65 but not over 85"
-
-Write:
-"is over 65 years old but not over 85 years old"
-
-Do not write:
-"is 70 years old"
-"was born 1955"
-
-Correct:
-"is 72 years old and was born 1954"
-
-Incorrect:
-"born 1954, age 72"
-
-Do not use database-style formatting.
-Do not use excessive commas.
-Prefer short sentences.
-If a spouse answered the phone on behalf of the prospect, focus the notes on the prospect, not the spouse.
-Only mention the spouse when the spouse provided important qualification information.
-Keep notes between 1 and 4 sentences.
-
-Write notes like a caller entering notes into a lead sheet.
-
-Do not write notes like a call summary.
-
-Do not repeat information.
-Campaign-specific formatting:
-
-For MedSupp:
-- Focus on Medicare coverage information.
-- If Medicare Supplement is confirmed, use "Medicare Supplement plan".
-- If Medicare Advantage is confirmed, use "Medicare Advantage plan".
-- If coverage type is not confirmed, use "secondary insurance".
-- If the spouse is not on Medicare, include that information only if discussed.
-If a spouse answers for the prospect:
-- Make the Medicare-eligible prospect the main subject.
-- Do not make the spouse the main subject unless the spouse is the actual prospect.
-If the prospect refuses to provide age or year of birth, do not estimate.
-
-If the prospect only confirms an age range, record the age range exactly as stated.
-
-For T65:
-- Include working status.
-- Include smoking status.
-- Include coverage information if discussed.
-
-For Life:
-- Include life insurance carrier.
-- Include benefit amount.
-- Include policy type if known.
-
-Use the same concise style commonly used in telemarketing lead sheets.
-
-Examples:
+EXAMPLES — match this style exactly
 
 MEDSUPP:
 Wayne is 69 years old and was born 1956.  He has a Medicare Supplement under Aetna as per his wife, Sheila.  His wife is not yet on Medicare.  Agreed to receive a call from our Medicare specialist.
 
-MEDSUPP Age Refused:
-Deborah is over 65 years old but not over 85 years old.  She has a Medicare Supplement but refused to disclose what company she has it with.
-
-MEDSUPP Spouse Coverage Unknown:
+MEDSUPP, spouse coverage unknown, no explicit agreement:
 Robert is 71 years old and was born 1954.  He has a Medicare Supplement under AARP through United Healthcare.  He is not sure of his wife's coverage.
 
-MEDSUPP Married:
+MEDSUPP, age refused:
+Deborah is over 65 years old but not over 85 years old.  She has a Medicare Supplement but refused to disclose what company she has it with.
+
+MEDSUPP, married:
 Gertie is 72 years old and was born 1954 while her husband, Rex, is 75 years old and was born 1951.  Rex has a Medicare Advantage plan under United Healthcare.  Gertie has secondary insurance under Devoted.  Agreed to receive a call from our Medicare specialist.
 
 T65:
 Robin is 64 years old and was born July 1961.  She is a non-smoker.  She has no secondary insurance.  She is still working.  Agreed to receive a call from our Medicare specialist.
 
-Life:
+LIFE:
 Glenna is 75 years old and was born 1951.  She has a life insurance policy under Prudential with a $10,000 benefit amount but is unsure of the policy type.  Agreed to receive a call from our Life specialist.
-
-Agreement Rules:
-
-Do not assume agreement to receive a call.
-
-Only state:
-"Agreed to receive a call from our Medicare specialist."
-or
-"Agreed to receive a call from our Life specialist."
-
-if the prospect explicitly agrees to receive a follow-up call or specialist call.
-
-A caller stating that a specialist will call is NOT considered agreement.
-
-If the prospect says:
-- "Please don't bother me anymore"
-- "Don't call me again"
-- "Remove me from your list"
-- "Not interested"
-- "Do not contact me"
-
-Do not add:
-"Agreed to receive a call from our Medicare specialist."
-
-Treat this as a declined follow-up.
-FOLLOW-UP RULE:
-- If the prospect agreed to receive a call, end with:
-  "Agreed to receive a call from our Medicare specialist."
-  or
-  "Agreed to receive a call from our Life specialist."
-- If no agreement was obtained, do not add any closing sentence.
 
 Return ONLY the notes paragraph.`
           },
           {
-            role:'user',
+            role: 'user',
             content:
               'Survey Type: ' +
               surveyType +
@@ -922,7 +787,6 @@ Return ONLY the notes paragraph.`
   }
 
   const data = await res.json();
-
   return data.choices[0].message.content.trim();
 }
 async function runAnalysis() {
