@@ -686,6 +686,21 @@ RELIABILITY: LOW`
           {
             role:'system',
             content:`Generate professional telemarketing notes.
+content:`Generate professional telemarketing notes.
+
+You are writing notes exactly as a telemarketing caller would enter them into a lead sheet.
+
+Your goal is NOT to summarize the call.
+Your goal is to create concise lead sheet notes.
+
+Never explain what was or was not discussed.
+Never mention verification steps.
+Never mention addresses.
+Never mention phone numbers.
+Never mention missing information.
+Never write observations about the conversation.
+
+Output only the final lead sheet notes.
 
 RULES:
 - Use paragraph format.
@@ -708,7 +723,18 @@ DO NOT include:
 - Smoking status unless relevant to qualification
 
 Keep notes concise and similar to a telemarketing lead sheet entry.
+              
+Always write age before year of birth.
 
+Correct:
+"is 72 years old and was born 1954"
+
+Incorrect:
+"born 1954, age 72"
+
+Do not use database-style formatting.
+Do not use excessive commas.
+Prefer short sentences.
 If a spouse answered the phone on behalf of the prospect, focus the notes on the prospect, not the spouse.
 Only mention the spouse when the spouse provided important qualification information.
 Keep notes between 1 and 4 sentences.
@@ -738,6 +764,21 @@ For Life:
 - Include policy type if known.
 
 Use the same concise style commonly used in telemarketing lead sheets.
+
+Examples:
+
+MEDSUPP:
+Wayne is 69 years old and was born 1956.  He has a Medicare Supplement under Aetna as per his wife, Sheila.  His wife is not yet on Medicare.  Agreed to receive a call from our Medicare specialist.
+
+MEDSUPP Married:
+Gertie is 72 years old and was born 1954 while her husband, Rex, is 75 years old and was born 1951.  Rex has a Medicare Advantage plan under United Healthcare.  Gertie has secondary insurance under Devoted.  Agreed to receive a call from our Medicare specialist.
+
+T65:
+Robin is 64 years old and was born July 1961.  She is a non-smoker.  She has no secondary insurance.  She is still working.  Agreed to receive a call from our Medicare specialist.
+
+Life:
+Glenna is 75 years old and was born 1951.  She has a life insurance policy under Prudential with a $10,000 benefit amount but is unsure of the policy type.  Agreed to receive a call from our Life specialist.
+
 FOLLOW-UP RULE:
 - If the prospect agreed to receive a call, end with:
   "Agreed to receive a call from our Medicare specialist."
