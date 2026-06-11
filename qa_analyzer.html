@@ -271,9 +271,20 @@ textarea:focus{border-color:var(--maroon)}
       <div id="criteriaRows"></div>
       <div id="flagsArea"></div>
     </div>
+    <!-- AI NOTES -->
+<div class="card" id="notesCard" style="display:none">
+  <div class="step-eye">Step 4 — AI Notes</div>
+  <div class="card-title">AI Generated Notes</div>
+
+  <textarea
+    id="aiNotes"
+    rows="6"
+    placeholder="AI-generated notes will appear here."
+  ></textarea>
+</div>
     <!-- FEEDBACK -->
     <div class="card" id="fbCard" style="display:none">
-      <div class="step-eye">Step 4 — Feedback</div>
+      <div class="step-eye">Step 5 — Feedback</div>
       <div class="card-title">QA feedback &amp; action plan</div>
       <div style="margin-bottom:10px">
         <div class="section-label">QA feedback</div>
@@ -657,6 +668,70 @@ RELIABILITY: LOW`
   const data = await res.json();
   return data.choices[0].message.content.trim();
 }
+  async function generateNotes(transcript, surveyType) {
+
+  const res = await fetch(
+    'https://api.groq.com/openai/v1/chat/completions',
+    {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+groqKey
+      },
+      body:JSON.stringify({
+        model:'llama-3.1-8b-instant',
+        temperature:0.1,
+        max_tokens:400,
+        messages:[
+          {
+            role:'system',
+            content:`Generate professional telemarketing notes.
+
+RULES:
+- Use paragraph format.
+- Use two spaces after every sentence.
+- Include age and year of birth.
+- Include spouse information if applicable.
+- Include carrier information.
+- Use "Medicare Supplement plan" only if explicitly confirmed.
+- Use "Medicare Advantage plan" only if explicitly confirmed.
+- If plan type is not confirmed, use "secondary insurance".
+- Include smoking status if discussed.
+- Include employment status if discussed.
+- Include marital status if discussed.
+- Do not guess.
+- Do not add information not discussed.
+
+FOLLOW-UP RULE:
+- If the prospect agreed to receive a call, end with:
+  "Agreed to receive a call from our Medicare specialist."
+  or
+  "Agreed to receive a call from our Life specialist."
+- If no agreement was obtained, do not add any closing sentence.
+
+Return ONLY the notes paragraph.`
+          },
+          {
+            role:'user',
+            content:
+              'Survey Type: ' +
+              surveyType +
+              '\n\nTranscript:\n' +
+              transcript
+          }
+        ]
+      })
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error('Notes generation failed');
+  }
+
+  const data = await res.json();
+
+  return data.choices[0].message.content.trim();
+}
 async function runAnalysis() {
   if (!ST.file) { alert('Please upload a recording first.'); return; }
   const btn = document.getElementById('analyzeBtn');
@@ -682,9 +757,20 @@ ST.transcript = await separateSpeakers(ST.transcript);
 
 showTranscript();
 
+const camp = ST.activeCamp;
+
+lbl.innerHTML = '<span class="spinner"></span> Generating notes...';
+
+const notes = await generateNotes(
+  ST.transcript,
+  camp?.surveyType || ''
+);
+
+document.getElementById('aiNotes').value = notes;
+document.getElementById('notesCard').style.display = '';
+    
     // Analyze
     lbl.innerHTML = '<span class="spinner"></span> Analyzing...';
-    const camp = ST.activeCamp;
     const allDnqs = [...BASE_DNQS,...(camp?.extraDnqs||[])];
     const reqFields = camp?.requiredFields||BASE_REQ;
     const geoFocus = camp?.geoFocus||'';
@@ -1004,6 +1090,8 @@ function resetForm() {
   renderCriteria();
   document.getElementById('scoreSummary').innerHTML='<div class="empty"><div style="font-size:28px;margin-bottom:8px">📋</div>Score appears after analysis</div>';
   document.getElementById('evalDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('aiNotes').value = '';
+document.getElementById('notesCard').style.display = 'none';
 }
 
 // ─── OM PANEL ─────────────────────────────────────────────────────────────────
