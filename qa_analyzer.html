@@ -800,7 +800,7 @@ function renderCallInfo(info) {
     <span style="color:${clr};font-weight:600">${txt}</span>${quote}
   </div>`;
 
-  const el = document.getElementById('call-info-body');
+  const el = document.getElementById('callInfoContent');
   if (el) el.innerHTML = html;
 }
 
@@ -1265,6 +1265,7 @@ Return ONLY:
     else { const t=total(); setDisp(t>=30?'Pass':'Fail'); }
 
     renderCallInfo(callInfo);
+    if (callInfo) document.getElementById('callInfoCard').style.display='';
     document.getElementById('txCard').style.display='';
     document.getElementById('scoreCard').style.display='';
     document.getElementById('fbCard').style.display='';
