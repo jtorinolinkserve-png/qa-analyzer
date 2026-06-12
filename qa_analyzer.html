@@ -828,6 +828,36 @@ const NOTES_BANNED_PATTERNS = [
   /^(he|she|prospect) is married\b/i
 ];
 
+function fixSameAgeCoupleFormat(text) {
+  // Deterministically merge two same-age-range sentences into the correct "both" format.
+  // Catches all model phrasing variants (while / is also / Her husband / His wife / etc.)
+  const RANGE = '(over \\d+ years old but not over \\d+ years old)';
+
+  // Variant A: two separate sentences joined by period + spaces
+  // "Rebecca is over 70... .  Her husband Chris is also over 70..."
+  text = text.replace(
+    new RegExp(
+      '([A-Z][a-z]+) is ' + RANGE + '\\.\\s{1,4}([Hh]er|[Hh]is) (husband|wife) ([A-Z][a-z]+) is (?:also )?\\2\\.',
+      'g'
+    ),
+    (_, name1, range, pronoun, relation, name2) =>
+      `${name1} and ${pronoun.toLowerCase()} ${relation} ${name2}, are both ${range}.`
+  );
+
+  // Variant B: single sentence with "while"
+  // "Rebecca is over 70... while her husband Chris is also over 70..."
+  text = text.replace(
+    new RegExp(
+      '([A-Z][a-z]+) is ' + RANGE + ' while ([hH]er|[hH]is) (husband|wife) ([A-Z][a-z]+) is (?:also )?\\2\\.',
+      'g'
+    ),
+    (_, name1, range, pronoun, relation, name2) =>
+      `${name1} and ${pronoun.toLowerCase()} ${relation} ${name2}, are both ${range}.`
+  );
+
+  return text;
+}
+
 function sanitizeNotes(raw) {
   const flat = raw.replace(/\s*\n+\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
   const sentences = flat.match(/[^.!?]+[.!?]+/g) || [flat];
@@ -835,7 +865,9 @@ function sanitizeNotes(raw) {
     .map(s => s.trim())
     .filter(s => s.length > 0)
     .filter(s => !NOTES_BANNED_PATTERNS.some(p => p.test(s)));
-  return kept.join('  ').trim();
+  let result = kept.join('  ').trim();
+  result = fixSameAgeCoupleFormat(result);
+  return result;
 }
 
 async function generateNotes(transcript, surveyType) {
