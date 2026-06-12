@@ -1674,4 +1674,11 @@ async function validateAndWriteLeadsheet(gradePrefix) {
 
   // Write via iframe — works on file:// protocol
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'display:none;position:absolute;width:1px;height:1px;
+  iframe.style.cssText = 'display:none;position:absolute;width:1px;height:1px;';
+  iframe.src = campUrl+'?action=write&phone='+encodeURIComponent(phone)+'&note='+encodeURIComponent(noteContent);
+  document.body.appendChild(iframe);
+  setTimeout(()=>{ try{document.body.removeChild(iframe);}catch(e){} }, 6000);
+}
+</script>
+</body>
+</html>
