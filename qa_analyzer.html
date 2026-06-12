@@ -739,69 +739,69 @@ Rules:
 function renderCallInfo(info) {
   if (!info) return;
 
-  // Two-column chip grid: label + icon+value side by side, very compact
-  const chip = (label, value, required = true) => {
-    const got  = value !== null && value !== undefined && value !== '';
+  // Helper: one label+value cell pair
+  const cell = (label, val, req=false) => {
+    const got = val !== null && val !== undefined && val !== '';
     const icon = got
-      ? `<span style="color:var(--green);font-weight:700;font-size:11px">✓</span>`
-      : `<span style="color:${required ? 'var(--red)' : 'var(--border-mid)'};font-size:11px">${required ? '✗' : '—'}</span>`;
-    const val  = got
-      ? `<span style="font-size:11px;color:var(--text)">${value}</span>`
-      : `<span style="font-size:11px;color:var(--text-light);font-style:italic">—</span>`;
-    return `<div style="display:flex;align-items:baseline;gap:4px;padding:3px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:10px;color:var(--text-light);min-width:90px;flex-shrink:0">${label}</span>
-      ${icon} ${val}
-    </div>`;
+      ? `<span style="color:var(--green);font-weight:700;margin-right:3px">✓</span>`
+      : `<span style="color:${req?'var(--red)':'var(--border-mid)'};margin-right:3px">${req?'✗':'—'}</span>`;
+    const display = got
+      ? `<span style="color:var(--text)">${val}</span>`
+      : `<span style="color:var(--text-light);font-style:italic">—</span>`;
+    return `<td style="font-size:11px;color:var(--text-light);padding:4px 8px 4px 0;white-space:nowrap;vertical-align:top;width:90px">${label}</td>`
+         + `<td style="font-size:11px;padding:4px 16px 4px 0;border-bottom:1px solid var(--border);vertical-align:top">${icon}${display}</td>`;
   };
 
-  const section = (label) =>
-    `<div style="font-size:9px;font-weight:700;color:var(--maroon);letter-spacing:.1em;text-transform:uppercase;margin:8px 0 2px;padding-bottom:2px;border-bottom:2px solid var(--maroon-light)">${label}</div>`;
+  const sectionHdr = (label) =>
+    `<tr><td colspan="4" style="font-size:10px;font-weight:700;color:var(--maroon);letter-spacing:.08em;text-transform:uppercase;padding:10px 0 4px;border-bottom:2px solid var(--maroon-light)">${label}</td></tr>`;
 
-  // Prospect + Spouse side by side if spouse exists
+  const spacer = () =>
+    `<tr><td colspan="4" style="height:6px"></td></tr>`;
+
   const hasSpouseSection = info.has_spouse === true
     || info.spouse_first_name || info.spouse_age
     || info.spouse_yob || info.spouse_carrier;
 
-  let prospectCol = section('Prospect');
-  prospectCol += chip('First name',    info.first_name);
-  prospectCol += chip('Last name',     info.last_name);
-  prospectCol += chip('Address',       info.address);
-  prospectCol += chip('Phone',         info.phone);
-  prospectCol += chip('Age',           info.age);
-  prospectCol += chip('Year of birth', info.yob);
-  prospectCol += chip('Carrier',       info.carrier, false);
+  let tbody = '';
 
-  let html;
+  // ── Prospect ──────────────────────────────────────────────────────────
+  tbody += sectionHdr('Prospect');
+  tbody += `<tr>${cell('First name', info.first_name, true)}${cell('Last name', info.last_name)}</tr>`;
+  tbody += `<tr>${cell('Carrier', info.carrier)}${cell('Phone', info.phone, true)}</tr>`;
+  tbody += `<tr>${cell('Age', info.age, true)}${cell('Address', info.address)}</tr>`;
+  tbody += `<tr>${cell('Year of birth', info.yob)}<td colspan="2"></td></tr>`;
+
+  // ── Spouse ────────────────────────────────────────────────────────────
   if (hasSpouseSection) {
-    let spouseCol = section('Spouse');
-    spouseCol += chip('First name',    info.spouse_first_name, false);
-    spouseCol += chip('Last name',     info.spouse_last_name,  false);
-    spouseCol += chip('Age',           info.spouse_age,        false);
-    spouseCol += chip('Year of birth', info.spouse_yob,        false);
-    spouseCol += chip('Carrier',       info.spouse_carrier,    false);
-    html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">${prospectCol}${spouseCol}</div>`;
-  } else {
-    html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px"><div>${prospectCol}</div><div></div></div>`;
+    tbody += spacer();
+    tbody += sectionHdr('Spouse');
+    tbody += `<tr>${cell('First name', info.spouse_first_name)}${cell('Last name', info.spouse_last_name)}</tr>`;
+    tbody += `<tr>${cell('Carrier', info.spouse_carrier)}${cell('Phone', info.phone)}</tr>`;
+    tbody += `<tr>${cell('Age', info.spouse_age)}${cell('Address', info.address)}</tr>`;
+    tbody += `<tr>${cell('Year of birth', info.spouse_yob)}<td colspan="2"></td></tr>`;
   }
 
-  // Closing agreement — compact inline strip
+  let html = `<table style="width:100%;border-collapse:collapse"><tbody>${tbody}</tbody></table>`;
+
+  // ── Closing strip ─────────────────────────────────────────────────────
   const ag   = info.agreed_to_followup;
   const clr  = ag === true ? 'var(--green)' : ag === false ? 'var(--red)' : 'var(--text-light)';
   const bg   = ag === true ? 'var(--green-light)' : ag === false ? 'var(--red-light)' : 'var(--gray-light)';
   const icon = ag === true ? '✓' : ag === false ? '✗' : '—';
-  const txt  = ag === true ? 'Agreed to receive follow-up call'
+  const txt  = ag === true  ? 'Agreed to receive follow-up call'
              : ag === false ? 'Declined / Do not call'
              : 'Closing not reached';
   const quote = info.agreement_quote
-    ? ` <span style="font-size:10px;color:${clr};font-style:italic">"${info.agreement_quote}"</span>` : '';
+    ? `<span style="font-style:italic;color:var(--text-light);margin-left:4px">"${info.agreement_quote}"</span>`
+    : '';
 
-  html += `<div style="margin-top:8px;background:${bg};border-radius:6px;padding:6px 10px;display:flex;align-items:center;gap:7px">
-    <span style="color:${clr};font-weight:700;font-size:12px">${icon}</span>
-    <span style="font-size:11px;font-weight:600;color:${clr}">${txt}</span>${quote}
+  html += `<div style="margin-top:10px;padding:5px 10px;border-radius:4px;background:${bg};display:flex;align-items:center;gap:6px;font-size:11px">
+    <span style="color:${clr};font-weight:700;font-size:13px">${icon}</span>
+    <span style="color:${clr};font-weight:600">${txt}</span>${quote}
   </div>`;
 
-  document.getElementById('callInfoContent').innerHTML = html;
-  document.getElementById('callInfoCard').style.display = '';
+  const el = document.getElementById('call-info-body');
+  if (el) el.innerHTML = html;
 }
 
 // ─── SANITIZER ────────────────────────────────────────────────────────────────
@@ -904,7 +904,9 @@ MARRIED COUPLES — canonical structures (copy exactly, adjust names)
 - Same age range (range confirmed, no exact YOB): "Rebecca and her husband Chris, are both over 70 years old but not over 85 years old."
   RULE: When BOTH spouses confirmed the SAME age range, you MUST use this "both" format — NEVER use "while".
   WRONG: "Rebecca is over 70 years old but not over 85 years old while her husband Chris is also over 70 years old but not over 85 years old."
+  WRONG: "Rebecca is over 70 years old but not over 85 years old while her husband is also over 70 years old but not over 85 years old."
   CORRECT: "Rebecca and her husband Chris, are both over 70 years old but not over 85 years old."
+  The word "while" ONLY appears when the two ranges are genuinely different numbers.
   (Never include "was born" if year of birth was not explicitly stated.)
 - Different age ranges (ranges are genuinely different): "Rebecca is over 65 years old but not over 85 years old while her husband Chris is over 70 years old but not over 85 years old."
   Only use "while" when the two ranges are actually different from each other.
@@ -922,7 +924,12 @@ ALTERNATE CONTACT INFO
 - If the prospect provides a new address (moved, or the address on file is outdated), add: "Provided a new address as 123 Gold St., Kannapolis, NC 28081."
 - If BOTH are provided, include both sentences — phone number first, then address.
 - These sentences go after the coverage/marital status sentences and before any "Agreed to receive..." sentence.
-- If the prospect did NOT provide an alternate phone number or new address, write NOTHING about contact information. Confirming the existing address or phone number during verification is NOT new contact info — write nothing about it.
+- A "new address" means the prospect VOLUNTEERS a different address than what the caller has on file.
+- An "alternate phone number" means the prospect OFFERS a different number not previously known.
+- CRITICAL: When the caller READS BACK an address or phone number and the prospect simply confirms ("Yes", "We are", "Correct", "It is"), that is VERIFICATION — write NOTHING. Do NOT write "Provided a new address" or "Provided an alternate phone number" in this case.
+  WRONG: Caller says "Are you still at 347 Hawksmore Court?" → Prospect says "We are." → DO NOT write "Provided a new address as 347 Hawksmore Court."
+  WRONG: Caller says "The number I dialed is 704-905-2770, correct?" → Prospect says "It is." → DO NOT write "Provided an alternate phone number as 704-905-2770."
+  CORRECT: Only write these sentences when the prospect says something like "Actually, my new address is..." or "You can also reach me at..." — information the caller did NOT already have.
 
 CANONICAL PHRASES — copy exactly (adjust pronouns only)
 - Unsure of carrier: "but not sure from what company they have it with"
@@ -992,7 +999,8 @@ Heart is 69 years old and was born 1956 while her husband Michael is 72 years ol
 ADVANTAGE, couple refused carrier, same age, no agreement:
 Heart and her husband Michael are both 69 years old and were born 1956.  They have a Medicare Advantage plan but refused to disclose from what company they have it with.
 
-MEDSUPP, couple same age range (no exact YOB), same carrier, prospect declined follow-up:
+MEDSUPP, couple same age range (no exact YOB), same carrier, prospect declined follow-up.
+Caller verified address and phone on file — prospect confirmed both. No new contact info:
 Rebecca and her husband Chris, are both over 70 years old but not over 85 years old.  They have a Medicare supplement under Blue Cross Blue Shield.
 
 ADVANTAGE, spouse still working:
