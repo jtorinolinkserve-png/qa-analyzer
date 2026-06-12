@@ -687,55 +687,6 @@ RELIABILITY: LOW`
   return data.choices[0].message.content.trim();
 }
 // ─── CALL INFORMATION EXTRACTION ──────────────────────────────────────────────
-async function extractCallInfo(transcript) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0,
-      max_tokens: 400,
-      response_format: {type:'json_object'},
-      messages: [{
-        role: 'system',
-        content: `Extract information that was explicitly stated or confirmed in this outbound telemarketing call. Return ONLY valid JSON. Use null for any field not mentioned or not confirmed in the call.
-
-{
-  "first_name": "string or null",
-  "last_name": "string or null",
-  "address": "full address string or null — include if stated or verified during verification",
-  "phone": "string or null — any phone number confirmed or newly provided",
-  "age": "string or null — exact number (e.g. 72) OR range as stated (e.g. 'over 70 but not over 85'). null if not mentioned.",
-  "yob": "number or null — year of birth only if explicitly stated. null if only an age range was confirmed.",
-  "carrier": "string or null — insurance carrier name",
-  "has_spouse": "true/false/null — true if spouse was mentioned",
-  "spouse_first_name": "string or null",
-  "spouse_last_name": "string or null",
-  "spouse_age": "string or null — exact number or range string. null if not mentioned.",
-  "spouse_yob": "number or null — year of birth only if explicitly stated.",
-  "spouse_carrier": "string or null",
-  "agreed_to_followup": "true/false/null — true=explicit yes to callback, false=explicit refusal, null=closing not reached or unclear",
-  "agreement_quote": "string or null — exact words used to agree or decline, max 15 words"
-}
-
-Rules:
-- Extract ONLY facts explicitly stated. Never infer, calculate, or guess.
-- agreed_to_followup=true ONLY if prospect said yes/okay/sure/alright to receiving a specialist call.
-- agreed_to_followup=false if they said no/don't call/not interested in follow-up.
-- agreed_to_followup=null if the call ended before closing or it was never offered.`
-      },{
-        role: 'user',
-        content: transcript
-      }]
-    })
-  });
-  if (!res.ok) return null;
-  try {
-    const data = await res.json();
-    return JSON.parse(data.choices[0].message.content);
-  } catch(e) { return null; }
-}
-
 function renderCallInfo(info) {
   if (!info) return;
 
@@ -870,7 +821,7 @@ function sanitizeNotes(raw) {
   return result;
 }
 
-async function generateNotes(transcript, surveyType) {
+async function generateNotesAndCallInfo(transcript, surveyType) {
   const res = await fetch(
     'https://api.groq.com/openai/v1/chat/completions',
     {
@@ -882,7 +833,8 @@ async function generateNotes(transcript, surveyType) {
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         temperature: 0,
-        max_tokens: 300,
+        max_tokens: 750,
+    response_format: {type:'json_object'},
         messages: [
           {
             role: 'system',
@@ -1074,7 +1026,38 @@ Robert is 71 years old and was born 1954.  He has a Medicare supplement under AA
 COUPLE, same coverage, declined further calls — notes end after the last fact, the refusal is NOT mentioned, no contact-info sentence:
 Ernest is 78 years old and was born 1948 while his wife Annie is 79 years old and was born 1947.  They have a Medicare supplement under United Healthcare.
 
-FINAL CHECK before you answer: re-read your notes and DELETE any sentence that mentions missing information, refusals, contact preferences, or the conversation itself. The notes must contain only facts about the prospect. Then return the single paragraph.`
+FINAL CHECK before you answer: re-read your notes and DELETE any sentence that mentions missing information, refusals, contact preferences, or the conversation itself. The notes must contain only facts about the prospect. Then return the single paragraph.
+
+ADDITIONALLY, after generating the notes, extract call information as structured data.
+
+Return your entire response as a single JSON object:
+{
+  "notes": "<the paragraph notes you generated above>",
+  "call_info": {
+    "first_name": null,
+    "last_name": null,
+    "address": null,
+    "phone": null,
+    "age": null,
+    "yob": null,
+    "carrier": null,
+    "has_spouse": null,
+    "spouse_first_name": null,
+    "spouse_last_name": null,
+    "spouse_age": null,
+    "spouse_yob": null,
+    "spouse_carrier": null,
+    "agreed_to_followup": null,
+    "agreement_quote": null
+  }
+}
+
+call_info rules:
+- age/spouse_age: exact number string OR range as stated (e.g. "over 70 but not over 85"). null if not mentioned.
+- yob/spouse_yob: year of birth number only if explicitly stated. null if only a range was confirmed.
+- agreed_to_followup: true=explicit yes to callback, false=explicit refusal, null=never offered or unclear.
+- agreement_quote: exact words to agree/decline, max 15 words.
+- Extract ONLY facts explicitly stated. Never infer or guess.`
           },
           {
             role: 'user',
@@ -1094,7 +1077,15 @@ FINAL CHECK before you answer: re-read your notes and DELETE any sentence that m
   }
 
   const data = await res.json();
-  return sanitizeNotes(data.choices[0].message.content.trim());
+  try {
+    const parsed = JSON.parse(data.choices[0].message.content);
+    return {
+      notes: sanitizeNotes((parsed.notes || '').trim()),
+      call_info: parsed.call_info || null
+    };
+  } catch(e) {
+    return { notes: sanitizeNotes(data.choices[0].message.content.trim()), call_info: null };
+  }
 }
 async function runAnalysis() {
   if (!ST.file) { alert('Please upload a recording first.'); return; }
@@ -1125,10 +1116,9 @@ const camp = ST.activeCamp;
 
 lbl.innerHTML = '<span class="spinner"></span> Generating notes & extracting call info...';
 
-const [notes, callInfo] = await Promise.all([
-  generateNotes(ST.transcript, camp?.surveyType || ''),
-  extractCallInfo(ST.transcript)
-]);
+const _combined = await generateNotesAndCallInfo(ST.transcript, camp?.surveyType || '');
+  const notes = _combined.notes || '';
+  const callInfo = _combined.call_info || null;
 
 document.getElementById('aiNotes').value = notes;
 document.getElementById('notesCard').style.display = '';
