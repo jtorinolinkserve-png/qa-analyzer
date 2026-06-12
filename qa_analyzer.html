@@ -207,15 +207,6 @@ textarea:focus{border-color:var(--maroon)}
           </div>
           <div style="font-size:11px;color:var(--text-mid);margin-top:5px">Paste your deployed QA Tracker Apps Script Web App URL here.</div>
         </div>
-        <div style="background:var(--gray-light);border:1px solid var(--border-mid);border-radius:8px;padding:12px 14px;margin-bottom:16px">
-          <div class="om-label">Leadsheet Apps Script URL <span style="font-size:10px;font-weight:400;color:var(--text-light);text-transform:none">(writes QA notes to AIMS LS Lead Sheet col C)</span></div>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-            <input type="text" id="leadsheetUrlInput" class="om-input" style="margin-bottom:0;font-size:11px;flex:1" placeholder="https://script.google.com/macros/s/...">
-            <button class="save-btn" onclick="updateLeadsheetUrl()">Save</button>
-            <span id="leadsheetUrlSavedMsg" style="font-size:11px;color:var(--green);display:none;font-weight:600">✓ Saved</span>
-          </div>
-          <div style="font-size:11px;color:var(--text-mid);margin-top:5px">Deploy AIMS_Leadsheet_QAWriter.gs and paste the web app URL here. Notes will be written automatically after each submit.</div>
-        </div>
         <!-- CAMPAIGN LIST -->
         <div id="campList"></div>
         <button class="add-camp-btn" onclick="addCamp()">+ Add new campaign</button>
@@ -360,7 +351,7 @@ let groqKey = localStorage.getItem('groq_key') || GROQ_KEY_DEFAULT;
 const OM_PASS = 'Linkserve123_';
 const SHEET_ID = '1Lx0ajz26zq-ABUEQlMMvQwTcoFCBz5YBwCZqSvUIa_Q';
 let APPS_SCRIPT_URL = localStorage.getItem('tmd_script_url') || 'https://script.google.com/macros/s/AKfycbylwJGCMEXF8vRmBhZvMk4TvJMal-z4iN7xTSQHvDxG4wX-k_Jk8jK2snMuqHfIfBHo4Q/exec';
-let LEADSHEET_URL  = localStorage.getItem('tmd_leadsheet_url') || '';
+// LEADSHEET_URL is stored per-campaign (camp.leadsheetUrl)
 const CAMP_KEY = 'tmd_qa_camps_v4';
 
 let omOpen = false;
@@ -420,6 +411,7 @@ function defaultCamps() {
     extraDnqs:[], geoFocus:'NC counties: Alexander, Anson, Burke, Cabarrus, Caldwell, Catawba, Cleveland, Gaston, Iredell, Lincoln, Mecklenburg, Rowan, Stanly, Union. SC counties: Cherokee, Lancaster, York.',
     requiredFields:['Date of birth','Full name','Zip code','Current coverage/plan'],
     notes:'Age 65-85 MedSupp, 40-85 Life. Transitions: MedSupp→Life if DNQ, MedSupp→T65 if turning 65. No repeat opening on transitions.',
+    leadsheetUrl:'',
     carriers:['AARP','UnitedHealthcare','Aetna','Aflac','Blue Cross Blue Shield','BCBS','Cigna','Humana','Mutual of Omaha','Transamerica','Bankers Life','Colonial Penn','Globe Life','American National','Physicians Mutual','Foresters','Gerber Life','New Era Life','Devoted','Allstate','State Farm','Prudential','MetLife','Lincoln Heritage','National General','Medico','United American','Washington National','Manhattan Life','Lumico','GPM Life','Pekin Life','Ohio National','Sentinel Security'],
     scripts:{
       medsup:'AIMS MEDSUP SCRIPT (SHORTENED)\n\nAGE RESTRICTION: 65-85\n\nOPENING: Hi, I am looking for Mr/Mrs ___. My name is ___, calling from the Medicare Supplement Division. We are conducting a brief survey to help Medicare recipients lower their costs.\n\nQ1. I am assuming you have a Medicare Supplement program. Is that correct?\n YES: Q2. NO: But are you on Medicare? YES: Do you have secondary insurance? Has secondary: Q2. No secondary: Just to confirm Medicare ONLY, correct? Starred questions. NO: Life survey.\n\nQ2. What company do you have your secondary plan with? (BCBS, Aetna, United Healthcare, Mutual of Omaha, Cigna, Humana)\n\nQ3. Are you married? NO: age+YOB. YES: Is spouse covered under same company? Same: confirm. Different: what company?\n\nQ4. What is your current age? Born in ___ or ___? Spouse age and YOB if applicable. If refuses: safe to say over 65 not over 85? If below age: Life survey. If age/YOB mismatch: clarify.\n\nVERIFICATION: First name ___ last name ___ correct? Spouse name? Address? Phone number?\n\nCLOSING QUALIFIED: Ok great! A Medicare Specialist will review your information and get back to you in a couple of days. Free and no obligation. Thank you!\nCLOSING DNQ: Alright, that is all I need. Thank you and have a great day!\n\nNOTES: Do NOT penalize for skipping Medicaid, monthly cost, or tobacco - not in shortened script. DO penalize: missing company, age/YOB, verification, closing.',
@@ -688,6 +680,40 @@ RELIABILITY: LOW`
   const data = await res.json();
   return data.choices[0].message.content.trim();
 }
+// ─── SANITIZER ────────────────────────────────────────────────────────────────
+const NOTES_BANNED_PATTERNS = [
+  /provided no alternate/i,
+  /no alternate (contact|phone|address)/i,
+  /did not provide/i,
+  /was not provided/i,
+  /no new (address|phone)/i,
+  /does not want/i,
+  /doesn'?t want/i,
+  /do not (call|contact)/i,
+  /don'?t (call|contact)/i,
+  /rather be contacted/i,
+  /prefers? to be contacted/i,
+  /requested (to be contacted|no (more )?calls)/i,
+  /no (more|further) calls/i,
+  /declined/i,
+  /refused to provide further/i,
+  /refused to participate/i,
+  /was not (discussed|mentioned|confirmed)/i,
+  /not discussed (in|during)/i,
+  /no (further|additional) information/i,
+  /^(he|she|prospect) is married\b/i
+];
+
+function sanitizeNotes(raw) {
+  const flat = raw.replace(/\s*\n+\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  const sentences = flat.match(/[^.!?]+[.!?]+/g) || [flat];
+  const kept = sentences
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .filter(s => !NOTES_BANNED_PATTERNS.some(p => p.test(s)));
+  return kept.join('  ').trim();
+}
+
 async function generateNotes(transcript, surveyType) {
   const res = await fetch(
     'https://api.groq.com/openai/v1/chat/completions',
@@ -1308,25 +1334,13 @@ function updateScriptUrl() {
   setTimeout(()=>m.style.display='none',2000);
 }
 
-function updateLeadsheetUrl() {
-  const u = document.getElementById('leadsheetUrlInput').value.trim();
-  if (!u) { alert('Please enter the Leadsheet Apps Script URL.'); return; }
-  LEADSHEET_URL = u;
-  try { localStorage.setItem('tmd_leadsheet_url', u); } catch(e) {}
-  const m = document.getElementById('leadsheetUrlSavedMsg');
-  m.style.display='inline';
-  setTimeout(()=>m.style.display='none',2000);
-}
-
 function renderOM() {
   document.getElementById('keyInput').value=groqKey;
   try {
     const savedUrl = localStorage.getItem('tmd_script_url');
     if (savedUrl) { APPS_SCRIPT_URL = savedUrl; document.getElementById('scriptUrlInput').value = savedUrl; }
     else document.getElementById('scriptUrlInput').value = APPS_SCRIPT_URL || '';
-    const savedLeadUrl = localStorage.getItem('tmd_leadsheet_url');
-    if (savedLeadUrl) { LEADSHEET_URL = savedLeadUrl; document.getElementById('leadsheetUrlInput').value = savedLeadUrl; }
-    else document.getElementById('leadsheetUrlInput').value = LEADSHEET_URL || '';
+
   } catch(e) {}
   const list=getCamps(); const el=document.getElementById('campList'); el.innerHTML='';
   list.forEach((c,i)=>{
@@ -1362,6 +1376,8 @@ function renderOM() {
         <textarea class="om-textarea" id="cca${i}" rows="2">${(c.carriers||[]).join(', ')}</textarea>
         <div class="om-label">Campaign notes for AI</div>
         <textarea class="om-textarea" id="co${i}" rows="2">${c.notes||''}</textarea>
+        <div class="om-label" style="margin-top:8px">Leadsheet Apps Script URL <span style="font-size:10px;font-weight:400;text-transform:none;color:var(--text-light)">(QA notes auto-written to this campaign's leadsheet)</span></div>
+        <input class="om-input" id="cls${i}" value="${c.leadsheetUrl||''}" placeholder="https://script.google.com/macros/s/...">
         <div style="display:flex;justify-content:space-between;margin-top:4px">
           <button class="danger-btn" onclick="delCamp(${i})">🗑 Delete</button>
           <button class="save-btn" onclick="saveCamp(${i})">Save</button>
@@ -1415,6 +1431,7 @@ function saveCamp(i) {
   list[i].geoFocus=document.getElementById('cg'+i).value.trim();
   list[i].guidelines=document.getElementById('cgl'+i).value.trim();
   list[i].notes=document.getElementById('co'+i).value.trim();
+  list[i].leadsheetUrl=document.getElementById('cls'+i).value.trim();
   list[i].carriers=document.getElementById('cca'+i).value.split(',').map(x=>x.trim()).filter(Boolean);
   list[i].scripts={
     medsup:document.getElementById('cs'+i+'medsup').value.trim(),
@@ -1436,6 +1453,7 @@ function saveAll() {
     list[i].geoFocus=document.getElementById('cg'+i).value.trim();
     list[i].guidelines=document.getElementById('cgl'+i).value.trim();
     list[i].notes=document.getElementById('co'+i).value.trim();
+    list[i].leadsheetUrl=document.getElementById('cls'+i).value.trim();
     list[i].carriers=document.getElementById('cca'+i).value.split(',').map(x=>x.trim()).filter(Boolean);
     list[i].scripts={
       medsup:document.getElementById('cs'+i+'medsup').value.trim(),
@@ -1448,7 +1466,7 @@ function saveAll() {
 
 function addCamp() {
   const list=getCamps();
-  list.push({id:'camp_'+Date.now(),name:'New Campaign',surveyType:'',extraDnqs:[],geoFocus:'',requiredFields:[...BASE_REQ],notes:'',carriers:[],scripts:{medsup:'',life:'',t65:''},guidelines:''});
+  list.push({id:'camp_'+Date.now(),name:'New Campaign',surveyType:'',extraDnqs:[],geoFocus:'',requiredFields:[...BASE_REQ],notes:'',leadsheetUrl:'',carriers:[],scripts:{medsup:'',life:'',t65:''},guidelines:''});
   saveCamps(list); renderOM(); setTimeout(()=>toggleCamp(list.length-1),50);
 }
 
@@ -1467,7 +1485,8 @@ function resetCamps() {
 
 // ─── LEADSHEET WRITE & VALIDATION ────────────────────────────────────────────
 async function validateAndWriteLeadsheet(gradePrefix) {
-  if (!LEADSHEET_URL) return;
+  const campUrl = ST.activeCamp?.leadsheetUrl || '';
+  if (!campUrl) return;
   const phone = document.getElementById('phoneNum').value.trim().replace(/\D/g, '');
   if (!phone) return;
 
@@ -1477,7 +1496,7 @@ async function validateAndWriteLeadsheet(gradePrefix) {
 
   // Attempt lookup (will fail silently on file://)
   try {
-    const resp = await fetch(LEADSHEET_URL + '?action=lookup&phone=' + encodeURIComponent(phone));
+    const resp = await fetch(campUrl + '?action=lookup&phone=' + encodeURIComponent(phone));
     if (resp.ok) {
       const lsData = await resp.json();
       if (lsData && lsData.found && lsData.row) {
@@ -1517,7 +1536,7 @@ async function validateAndWriteLeadsheet(gradePrefix) {
   // Write via iframe — works on file:// protocol
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'display:none;position:absolute;width:1px;height:1px;';
-  iframe.src = LEADSHEET_URL+'?action=write&phone='+encodeURIComponent(phone)+'&note='+encodeURIComponent(noteContent);
+  iframe.src = campUrl+'?action=write&phone='+encodeURIComponent(phone)+'&note='+encodeURIComponent(noteContent);
   document.body.appendChild(iframe);
   setTimeout(()=>{ try{document.body.removeChild(iframe);}catch(e){} }, 6000);
 }
