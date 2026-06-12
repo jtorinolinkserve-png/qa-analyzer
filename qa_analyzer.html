@@ -705,14 +705,14 @@ async function extractCallInfo(transcript) {
   "last_name": "string or null",
   "address": "full address string or null — include if stated or verified during verification",
   "phone": "string or null — any phone number confirmed or newly provided",
-  "age": "number or null",
-  "yob": "number or null — year of birth",
+  "age": "string or null — exact number (e.g. 72) OR range as stated (e.g. 'over 70 but not over 85'). null if not mentioned.",
+  "yob": "number or null — year of birth only if explicitly stated. null if only an age range was confirmed.",
   "carrier": "string or null — insurance carrier name",
   "has_spouse": "true/false/null — true if spouse was mentioned",
   "spouse_first_name": "string or null",
   "spouse_last_name": "string or null",
-  "spouse_age": "number or null",
-  "spouse_yob": "number or null",
+  "spouse_age": "string or null — exact number or range string. null if not mentioned.",
+  "spouse_yob": "number or null — year of birth only if explicitly stated.",
   "spouse_carrier": "string or null",
   "agreed_to_followup": "true/false/null — true=explicit yes to callback, false=explicit refusal, null=closing not reached or unclear",
   "agreement_quote": "string or null — exact words used to agree or decline, max 15 words"
@@ -739,60 +739,65 @@ Rules:
 function renderCallInfo(info) {
   if (!info) return;
 
-  const row = (label, value, required = true) => {
+  // Two-column chip grid: label + icon+value side by side, very compact
+  const chip = (label, value, required = true) => {
     const got  = value !== null && value !== undefined && value !== '';
     const icon = got
-      ? `<span style="color:var(--green);font-weight:700;font-size:14px;flex-shrink:0">✓</span>`
-      : `<span style="color:${required ? 'var(--red)' : 'var(--text-light)'};font-size:14px;flex-shrink:0">${required ? '✗' : '—'}</span>`;
+      ? `<span style="color:var(--green);font-weight:700;font-size:11px">✓</span>`
+      : `<span style="color:${required ? 'var(--red)' : 'var(--border-mid)'};font-size:11px">${required ? '✗' : '—'}</span>`;
     const val  = got
-      ? `<span style="font-size:13px;color:var(--text)">${value}</span>`
-      : `<span style="font-size:12px;color:var(--text-light);font-style:italic">Not obtained</span>`;
-    return `<div style="display:grid;grid-template-columns:150px 1fr;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);align-items:center">
-      <div style="font-size:11px;color:var(--text-mid);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${label}</div>
-      <div style="display:flex;align-items:center;gap:8px">${icon}${val}</div>
+      ? `<span style="font-size:11px;color:var(--text)">${value}</span>`
+      : `<span style="font-size:11px;color:var(--text-light);font-style:italic">—</span>`;
+    return `<div style="display:flex;align-items:baseline;gap:4px;padding:3px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:10px;color:var(--text-light);min-width:90px;flex-shrink:0">${label}</span>
+      ${icon} ${val}
     </div>`;
   };
 
   const section = (label) =>
-    `<div style="font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:.1em;text-transform:uppercase;margin:14px 0 2px">${label}</div>`;
+    `<div style="font-size:9px;font-weight:700;color:var(--maroon);letter-spacing:.1em;text-transform:uppercase;margin:8px 0 2px;padding-bottom:2px;border-bottom:2px solid var(--maroon-light)">${label}</div>`;
 
-  let html = section('Prospect');
-  html += row('First name',        info.first_name);
-  html += row('Last name',         info.last_name);
-  html += row('Address',           info.address);
-  html += row('Phone',             info.phone);
-  html += row('Age',               info.age);
-  html += row('Year of birth',     info.yob);
-  html += row('Insurance carrier', info.carrier, false);
-
+  // Prospect + Spouse side by side if spouse exists
   const hasSpouseSection = info.has_spouse === true
     || info.spouse_first_name || info.spouse_age
     || info.spouse_yob || info.spouse_carrier;
 
+  let prospectCol = section('Prospect');
+  prospectCol += chip('First name',    info.first_name);
+  prospectCol += chip('Last name',     info.last_name);
+  prospectCol += chip('Address',       info.address);
+  prospectCol += chip('Phone',         info.phone);
+  prospectCol += chip('Age',           info.age);
+  prospectCol += chip('Year of birth', info.yob);
+  prospectCol += chip('Carrier',       info.carrier, false);
+
+  let html;
   if (hasSpouseSection) {
-    html += section('Spouse');
-    html += row('First name',        info.spouse_first_name, false);
-    html += row('Last name',         info.spouse_last_name,  false);
-    html += row('Age',               info.spouse_age,        false);
-    html += row('Year of birth',     info.spouse_yob,        false);
-    html += row('Insurance carrier', info.spouse_carrier,    false);
+    let spouseCol = section('Spouse');
+    spouseCol += chip('First name',    info.spouse_first_name, false);
+    spouseCol += chip('Last name',     info.spouse_last_name,  false);
+    spouseCol += chip('Age',           info.spouse_age,        false);
+    spouseCol += chip('Year of birth', info.spouse_yob,        false);
+    spouseCol += chip('Carrier',       info.spouse_carrier,    false);
+    html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">${prospectCol}${spouseCol}</div>`;
+  } else {
+    html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px"><div>${prospectCol}</div><div></div></div>`;
   }
 
-  // Closing agreement
+  // Closing agreement — compact inline strip
   const ag   = info.agreed_to_followup;
   const clr  = ag === true ? 'var(--green)' : ag === false ? 'var(--red)' : 'var(--text-light)';
   const bg   = ag === true ? 'var(--green-light)' : ag === false ? 'var(--red-light)' : 'var(--gray-light)';
   const icon = ag === true ? '✓' : ag === false ? '✗' : '—';
   const txt  = ag === true ? 'Agreed to receive follow-up call'
-             : ag === false ? 'Declined follow-up / do not call'
-             : 'Closing not reached or unclear';
+             : ag === false ? 'Declined / Do not call'
+             : 'Closing not reached';
   const quote = info.agreement_quote
-    ? `<div style="font-size:11px;color:${clr};margin-top:4px;font-style:italic">"${info.agreement_quote}"</div>` : '';
+    ? ` <span style="font-size:10px;color:${clr};font-style:italic">"${info.agreement_quote}"</span>` : '';
 
-  html += section('Closing');
-  html += `<div style="background:${bg};border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;margin-top:4px">
-    <span style="color:${clr};font-weight:700;font-size:18px;line-height:1.1;flex-shrink:0">${icon}</span>
-    <div><div style="font-size:13px;font-weight:600;color:${clr}">${txt}</div>${quote}</div>
+  html += `<div style="margin-top:8px;background:${bg};border-radius:6px;padding:6px 10px;display:flex;align-items:center;gap:7px">
+    <span style="color:${clr};font-weight:700;font-size:12px">${icon}</span>
+    <span style="font-size:11px;font-weight:600;color:${clr}">${txt}</span>${quote}
   </div>`;
 
   document.getElementById('callInfoContent').innerHTML = html;
@@ -895,8 +900,13 @@ AGE AND YEAR OF BIRTH
 MARRIED COUPLES — canonical structures (copy exactly, adjust names)
 - Both ages known: "Marge is 72 years old and was born 1952 while her husband John is 76 years old and was born 1949."
   (No comma between "husband"/"wife" and the name.)
-- Same age: "Heart and her husband Michael are both 69 years old and were born 1956."
-- Same coverage: "They have a Medicare supplement under Humana." Never repeat coverage per person, never write "as does his wife".
+- Same age (exact): "Heart and her husband Michael are both 69 years old and were born 1956."
+- Same age range (range confirmed, no exact YOB): "Rebecca and her husband Chris are both over 70 years old but not over 85 years old."
+  (Use "both" when the same range applies to both. Never include "was born" if year of birth was not explicitly stated.)
+- Different age ranges: "Rebecca is over 65 years old but not over 85 years old while her husband Chris is over 70 years old but not over 85 years old."
+- Same coverage: "They have a Medicare supplement under Humana."
+  This applies even when each person's coverage was confirmed separately in the call.
+  Never repeat coverage per person. Never write "as does his wife", "her husband also has", or any per-person coverage sentence when both share the same carrier and plan type.
 - Different carriers: "They have Medicare supplement plan.  Heart has her supplement under United Healthcare while Michael is with Cigna."
 - Different plan types: "Heart has her Medicare supplement under Mutual of Omaha while Michael has a Medicare Advantage plan under Wellcare."
 - Spouse working: "Her husband is still working."
@@ -977,6 +987,9 @@ Heart is 69 years old and was born 1956 while her husband Michael is 72 years ol
 
 ADVANTAGE, couple refused carrier, same age, no agreement:
 Heart and her husband Michael are both 69 years old and were born 1956.  They have a Medicare Advantage plan but refused to disclose from what company they have it with.
+
+MEDSUPP, couple same age range (no exact YOB), same carrier, prospect declined follow-up:
+Rebecca and her husband Chris are both over 70 years old but not over 85 years old.  They have a Medicare supplement under Blue Cross Blue Shield.
 
 ADVANTAGE, spouse still working:
 Heart is 69 years old and was born 1956.  She has a Medicare Advantage plan but refused to disclose from what company she has it with.  Her husband is still working.  Agreed to receive a call from our Medicare specialist.
