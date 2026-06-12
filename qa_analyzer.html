@@ -668,12 +668,61 @@ RELIABILITY: LOW`
   const data = await res.json();
   return data.choices[0].message.content.trim();
 }
-// ─── REPLACEMENT: generateNotes (v4) ──────────────────────────────────────────
+// ─── REPLACEMENT: generateNotes (v7) ──────────────────────────────────────────
 // Drop-in replacement. Same signature, same call site.
-// Changes from v3:
-//   1. Address note phrasing corrected: "Provided a new address as ..."
-//   2. Explicit rule: alternate phone AND new address both provided → include
-//      both sentences (phone first, then address)
+// Changes from v6:
+//   1. Secondary-insurance example renamed to a fictional prospect (Walter) —
+//      using the real Robert test call as the counter-example caused the model
+//      to pattern-match his transcript to the wrong wording.
+//   2. Robert restored as the example of assumptive-question-confirmed
+//      Medicare supplement (his actual correct notes).
+//   3. Sanitizer: standalone "He/She is married" sentences now stripped —
+//      house style never states marriage positively (spouse mention implies it).
+//
+// The sanitizer is conservative: it only removes whole sentences matching
+// known-bad patterns. Canonical phrases like "not sure from what company"
+// and "refused to disclose" are NOT affected.
+
+// Sentences matching ANY of these patterns are removed from the notes.
+const NOTES_BANNED_PATTERNS = [
+  /provided no alternate/i,
+  /no alternate (contact|phone|address)/i,
+  /did not provide/i,
+  /was not provided/i,
+  /no new (address|phone)/i,
+  /does not want/i,
+  /doesn'?t want/i,
+  /do not (call|contact)/i,
+  /don'?t (call|contact)/i,
+  /rather be contacted/i,
+  /prefers? to be contacted/i,
+  /requested (to be contacted|no (more )?calls)/i,
+  /no (more|further) calls/i,
+  /declined/i,
+  /refused to provide further/i,
+  /refused to participate/i,
+  /was not (discussed|mentioned|confirmed)/i,
+  /not discussed (in|during)/i,
+  /no (further|additional) information/i,
+  /^(he|she|prospect) is married\b/i
+];
+
+function sanitizeNotes(raw) {
+  // Normalize: collapse line breaks and runs of whitespace into single spaces,
+  // then re-split into sentences.
+  const flat = raw.replace(/\s*\n+\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+
+  // Split into sentences (keep the terminating punctuation).
+  const sentences = flat.match(/[^.!?]+[.!?]+/g) || [flat];
+
+  const kept = sentences
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .filter(s => !NOTES_BANNED_PATTERNS.some(p => p.test(s)));
+
+  // Rejoin in house style: two spaces after every sentence, single paragraph.
+  return kept.join('  ').trim();
+}
 
 async function generateNotes(transcript, surveyType) {
   const res = await fetch(
@@ -695,9 +744,9 @@ async function generateNotes(transcript, surveyType) {
 
 OUTPUT FORMAT
 - Return ONLY the notes paragraph. No preamble, no labels, no quotes.
-- Short sentences. Two spaces after every sentence.
+- ONE single paragraph. No line breaks. Short sentences with two spaces after every sentence.
 - Start with the prospect's first name.
-- Paragraph format. No database-style formatting. Never repeat a name or fact already stated.
+- Never repeat a name or fact already stated.
 
 SUBJECT
 - The notes are always about the Medicare-eligible prospect, even if a spouse answered the phone.
@@ -706,8 +755,9 @@ SUBJECT
 MARITAL STATUS
 - If the prospect is single: add "Not married." as its own sentence.
 - If widowed: add "Widowed." as its own sentence.
+- NEVER write "He is married." or "She is married." — marriage is only ever implied by mentioning the husband/wife/spouse. There is no positive marriage sentence in house style.
 - If a husband/wife/spouse is mentioned in the notes, do NOT separately state marital status — it is already implied.
-- If marital status was never discussed, omit it entirely.
+- If marital status was never discussed, write nothing about it.
 
 COVERAGE WORDING (follow in this exact priority order)
 1. If the caller asked an assumptive question such as "it shows here that you have a Medicare supplement program, is that correct?" and the prospect answered yes (or any affirmative), the Medicare supplement IS CONFIRMED. Write "Medicare supplement".
@@ -749,6 +799,7 @@ ALTERNATE CONTACT INFO
 - If the prospect provides a new address (moved, or the address on file is outdated), add: "Provided a new address as 123 Gold St., Kannapolis, NC 28081."
 - If BOTH are provided, include both sentences — phone number first, then address.
 - These sentences go after the coverage/marital status sentences and before any "Agreed to receive..." sentence.
+- If the prospect did NOT provide an alternate phone number or new address, write NOTHING about contact information. Confirming the existing address or phone number during verification is NOT new contact info — write nothing about it.
 
 CANONICAL PHRASES — copy exactly (adjust pronouns only)
 - Unsure of carrier: "but not sure from what company they have it with"
@@ -760,18 +811,26 @@ Never reword these. Never write "He agreed to receive..." — the sentence start
 
 REFUSALS
 - Never convert a refusal into a fact.
-- Do not document objections, irritation, "don't call me again", or declined participation.
-
-NEVER INCLUDE
-- The verified address, zip code, or the phone number that was dialed. Only an ALTERNATE phone number or a NEW address freshly provided by the prospect may be included, using the canonical sentences above.
-- Verification steps, statements about missing information, observations about the conversation.
+- Refusals to participate, requests not to be called, and contact preferences are NEVER written in the notes. They only affect whether the "Agreed to receive..." sentence appears.
 
 FOLLOW-UP / AGREEMENT RULE (strict — check the ENTIRE call before deciding)
 - Add the "Agreed to receive a call..." sentence ONLY if the prospect gave an explicit, affirmative response directly to the follow-up offer (e.g. "yes", "okay, that's fine", "sure").
 - The caller announcing that a specialist will call is NOT agreement.
 - "Thank you", "uh-huh", "mhm", politeness, silence, or not objecting after the closing spiel is NOT agreement.
 - OVERRIDE RULE: if at ANY point in the call — including after the closing — the prospect says they do not want calls, asks for mail or email instead, or refuses follow-up in any form, you must NOT add the agreed sentence, even if earlier parts of the call sounded cooperative. The latest statement wins.
-- If agreement was not explicit, end the notes WITHOUT any closing sentence. Do not substitute any other closing line. Do not mention the refusal.
+- When agreement was not explicit or was refused: simply end the notes after the last factual sentence. Add nothing in its place.
+
+BANNED SENTENCES — never write anything resembling these
+- "Provided no alternate contact information."
+- "No alternate contact information was given."
+- "He does not want any more calls."
+- "Would rather be contacted by mail or email."
+- "Requested to be contacted by mail."
+- "Refused to provide further information."
+- "Please do not contact him again."
+- "Declined participation."
+- Any sentence about what was NOT provided, NOT discussed, or NOT confirmed (except the canonical refusal-of-carrier and refusal-of-spouse-info phrases).
+- Any sentence describing the conversation itself.
 
 CAMPAIGN-SPECIFIC
 - MedSupp: focus on Medicare coverage per the coverage wording rules. Include spouse coverage only if discussed.
@@ -840,13 +899,16 @@ Yhana is 69 years old and was born 1956.  She has a Medicare supplement under Hu
 ALTERNATE PHONE AND NEW ADDRESS PROVIDED:
 Yhana is 69 years old and was born 1956.  She has a Medicare supplement under Humana.  Widowed.  Provided an alternate phone number as 123456789.  Provided a new address as 123 Gold St., Kannapolis, NC 28081.  Agreed to receive a call from our Medicare specialist.
 
-SECONDARY INSURANCE (plan type never confirmed):
-Robert is 71 years old and was born 1954.  He has secondary insurance under AARP through United Healthcare.  He is not sure of his wife's coverage.
+SECONDARY INSURANCE (prospect confirmed secondary coverage but plan type was NEVER established in the call):
+Walter is 74 years old and was born 1951.  He has secondary insurance under Cigna.  Not married.  Agreed to receive a call from our Medicare specialist.
 
-COUPLE, same coverage, declined further calls (no agreed sentence, refusal not mentioned):
+MEDSUPP confirmed via assumptive question (prospect answered yes to "you have a Medicare supplement, is that correct?"), spouse coverage unknown, no explicit agreement:
+Robert is 71 years old and was born 1954.  He has a Medicare supplement under AARP through United Healthcare.  He is not sure of his wife's coverage.
+
+COUPLE, same coverage, declined further calls — notes end after the last fact, the refusal is NOT mentioned, no contact-info sentence:
 Ernest is 78 years old and was born 1948 while his wife, Annie is 79 years old and was born 1947.  They have a Medicare supplement under United Healthcare.
 
-Return ONLY the notes paragraph.`
+FINAL CHECK before you answer: re-read your notes and DELETE any sentence that mentions missing information, refusals, contact preferences, or the conversation itself. The notes must contain only facts about the prospect. Then return the single paragraph.`
           },
           {
             role: 'user',
@@ -866,7 +928,7 @@ Return ONLY the notes paragraph.`
   }
 
   const data = await res.json();
-  return data.choices[0].message.content.trim();
+  return sanitizeNotes(data.choices[0].message.content.trim());
 }
 async function runAnalysis() {
   if (!ST.file) { alert('Please upload a recording first.'); return; }
