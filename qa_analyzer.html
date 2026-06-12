@@ -260,9 +260,15 @@ textarea:focus{border-color:var(--maroon)}
       <div id="txMeta" style="margin-bottom:10px"></div>
       <div class="transcript-box" id="txBox"></div>
     </div>
+    <!-- CALL INFO -->
+    <div class="card" id="callInfoCard" style="display:none">
+      <div class="step-eye">Step 3 — Call Information</div>
+      <div class="card-title">Information obtained in call</div>
+      <div id="callInfoContent"></div>
+    </div>
     <!-- SCORING -->
     <div class="card" id="scoreCard" style="display:none">
-      <div class="step-eye">Step 3 — Review scores</div>
+      <div class="step-eye">Step 4 — Review scores</div>
       <div class="card-title">QA scoring</div>
       <div class="legend">
         <span><span class="legend-dot" style="background:var(--maroon-light);border:1px solid var(--maroon-mid)"></span> <span style="font-size:11px;color:var(--text-mid)">AI suggested</span></span>
@@ -273,7 +279,7 @@ textarea:focus{border-color:var(--maroon)}
     </div>
     <!-- AI NOTES -->
 <div class="card" id="notesCard" style="display:none">
-  <div class="step-eye">Step 4 — AI Notes</div>
+  <div class="step-eye">Step 5 — AI Notes</div>
   <div class="card-title">AI Generated Notes</div>
 
   <textarea
@@ -284,7 +290,7 @@ textarea:focus{border-color:var(--maroon)}
 </div>
     <!-- FEEDBACK -->
     <div class="card" id="fbCard" style="display:none">
-      <div class="step-eye">Step 5 — Feedback</div>
+      <div class="step-eye">Step 6 — Feedback</div>
       <div class="card-title">QA feedback &amp; action plan</div>
       <div style="margin-bottom:10px">
         <div class="section-label">QA feedback</div>
@@ -680,6 +686,119 @@ RELIABILITY: LOW`
   const data = await res.json();
   return data.choices[0].message.content.trim();
 }
+// ─── CALL INFORMATION EXTRACTION ──────────────────────────────────────────────
+async function extractCallInfo(transcript) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0,
+      max_tokens: 400,
+      response_format: {type:'json_object'},
+      messages: [{
+        role: 'system',
+        content: `Extract information that was explicitly stated or confirmed in this outbound telemarketing call. Return ONLY valid JSON. Use null for any field not mentioned or not confirmed in the call.
+
+{
+  "first_name": "string or null",
+  "last_name": "string or null",
+  "address": "full address string or null — include if stated or verified during verification",
+  "phone": "string or null — any phone number confirmed or newly provided",
+  "age": "number or null",
+  "yob": "number or null — year of birth",
+  "carrier": "string or null — insurance carrier name",
+  "has_spouse": "true/false/null — true if spouse was mentioned",
+  "spouse_first_name": "string or null",
+  "spouse_last_name": "string or null",
+  "spouse_age": "number or null",
+  "spouse_yob": "number or null",
+  "spouse_carrier": "string or null",
+  "agreed_to_followup": "true/false/null — true=explicit yes to callback, false=explicit refusal, null=closing not reached or unclear",
+  "agreement_quote": "string or null — exact words used to agree or decline, max 15 words"
+}
+
+Rules:
+- Extract ONLY facts explicitly stated. Never infer, calculate, or guess.
+- agreed_to_followup=true ONLY if prospect said yes/okay/sure/alright to receiving a specialist call.
+- agreed_to_followup=false if they said no/don't call/not interested in follow-up.
+- agreed_to_followup=null if the call ended before closing or it was never offered.`
+      },{
+        role: 'user',
+        content: transcript
+      }]
+    })
+  });
+  if (!res.ok) return null;
+  try {
+    const data = await res.json();
+    return JSON.parse(data.choices[0].message.content);
+  } catch(e) { return null; }
+}
+
+function renderCallInfo(info) {
+  if (!info) return;
+
+  const row = (label, value, required = true) => {
+    const got  = value !== null && value !== undefined && value !== '';
+    const icon = got
+      ? `<span style="color:var(--green);font-weight:700;font-size:14px;flex-shrink:0">✓</span>`
+      : `<span style="color:${required ? 'var(--red)' : 'var(--text-light)'};font-size:14px;flex-shrink:0">${required ? '✗' : '—'}</span>`;
+    const val  = got
+      ? `<span style="font-size:13px;color:var(--text)">${value}</span>`
+      : `<span style="font-size:12px;color:var(--text-light);font-style:italic">Not obtained</span>`;
+    return `<div style="display:grid;grid-template-columns:150px 1fr;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);align-items:center">
+      <div style="font-size:11px;color:var(--text-mid);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${label}</div>
+      <div style="display:flex;align-items:center;gap:8px">${icon}${val}</div>
+    </div>`;
+  };
+
+  const section = (label) =>
+    `<div style="font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:.1em;text-transform:uppercase;margin:14px 0 2px">${label}</div>`;
+
+  let html = section('Prospect');
+  html += row('First name',        info.first_name);
+  html += row('Last name',         info.last_name);
+  html += row('Address',           info.address);
+  html += row('Phone',             info.phone);
+  html += row('Age',               info.age);
+  html += row('Year of birth',     info.yob);
+  html += row('Insurance carrier', info.carrier, false);
+
+  const hasSpouseSection = info.has_spouse === true
+    || info.spouse_first_name || info.spouse_age
+    || info.spouse_yob || info.spouse_carrier;
+
+  if (hasSpouseSection) {
+    html += section('Spouse');
+    html += row('First name',        info.spouse_first_name, false);
+    html += row('Last name',         info.spouse_last_name,  false);
+    html += row('Age',               info.spouse_age,        false);
+    html += row('Year of birth',     info.spouse_yob,        false);
+    html += row('Insurance carrier', info.spouse_carrier,    false);
+  }
+
+  // Closing agreement
+  const ag   = info.agreed_to_followup;
+  const clr  = ag === true ? 'var(--green)' : ag === false ? 'var(--red)' : 'var(--text-light)';
+  const bg   = ag === true ? 'var(--green-light)' : ag === false ? 'var(--red-light)' : 'var(--gray-light)';
+  const icon = ag === true ? '✓' : ag === false ? '✗' : '—';
+  const txt  = ag === true ? 'Agreed to receive follow-up call'
+             : ag === false ? 'Declined follow-up / do not call'
+             : 'Closing not reached or unclear';
+  const quote = info.agreement_quote
+    ? `<div style="font-size:11px;color:${clr};margin-top:4px;font-style:italic">"${info.agreement_quote}"</div>` : '';
+
+  html += section('Closing');
+  html += `<div style="background:${bg};border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;margin-top:4px">
+    <span style="color:${clr};font-weight:700;font-size:18px;line-height:1.1;flex-shrink:0">${icon}</span>
+    <div><div style="font-size:13px;font-weight:600;color:${clr}">${txt}</div>${quote}</div>
+  </div>`;
+
+  document.getElementById('callInfoContent').innerHTML = html;
+  document.getElementById('callInfoCard').style.display = '';
+}
+
 // ─── SANITIZER ────────────────────────────────────────────────────────────────
 const NOTES_BANNED_PATTERNS = [
   /provided no alternate/i,
@@ -947,12 +1066,12 @@ showTranscript();
 
 const camp = ST.activeCamp;
 
-lbl.innerHTML = '<span class="spinner"></span> Generating notes...';
+lbl.innerHTML = '<span class="spinner"></span> Generating notes & extracting call info...';
 
-const notes = await generateNotes(
-  ST.transcript,
-  camp?.surveyType || ''
-);
+const [notes, callInfo] = await Promise.all([
+  generateNotes(ST.transcript, camp?.surveyType || ''),
+  extractCallInfo(ST.transcript)
+]);
 
 document.getElementById('aiNotes').value = notes;
 document.getElementById('notesCard').style.display = '';
@@ -1088,6 +1207,7 @@ Return ONLY:
     else if (ST.dnqFlags.length>0||ST.geoFlags.length>0) setDisp('Invalid');
     else { const t=total(); setDisp(t>=30?'Pass':'Fail'); }
 
+    renderCallInfo(callInfo);
     document.getElementById('txCard').style.display='';
     document.getElementById('scoreCard').style.display='';
     document.getElementById('fbCard').style.display='';
@@ -1281,6 +1401,8 @@ function resetForm() {
   document.getElementById('evalDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('aiNotes').value = '';
 document.getElementById('notesCard').style.display = 'none';
+  document.getElementById('callInfoContent').innerHTML = '';
+  document.getElementById('callInfoCard').style.display = 'none';
 }
 
 // ─── OM PANEL ─────────────────────────────────────────────────────────────────
