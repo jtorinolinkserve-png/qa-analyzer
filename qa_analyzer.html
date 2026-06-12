@@ -901,9 +901,13 @@ MARRIED COUPLES — canonical structures (copy exactly, adjust names)
 - Both ages known: "Marge is 72 years old and was born 1952 while her husband John is 76 years old and was born 1949."
   (No comma between "husband"/"wife" and the name.)
 - Same age (exact): "Heart and her husband Michael are both 69 years old and were born 1956."
-- Same age range (range confirmed, no exact YOB): "Rebecca and her husband Chris are both over 70 years old but not over 85 years old."
-  (Use "both" when the same range applies to both. Never include "was born" if year of birth was not explicitly stated.)
-- Different age ranges: "Rebecca is over 65 years old but not over 85 years old while her husband Chris is over 70 years old but not over 85 years old."
+- Same age range (range confirmed, no exact YOB): "Rebecca and her husband Chris, are both over 70 years old but not over 85 years old."
+  RULE: When BOTH spouses confirmed the SAME age range, you MUST use this "both" format — NEVER use "while".
+  WRONG: "Rebecca is over 70 years old but not over 85 years old while her husband Chris is also over 70 years old but not over 85 years old."
+  CORRECT: "Rebecca and her husband Chris, are both over 70 years old but not over 85 years old."
+  (Never include "was born" if year of birth was not explicitly stated.)
+- Different age ranges (ranges are genuinely different): "Rebecca is over 65 years old but not over 85 years old while her husband Chris is over 70 years old but not over 85 years old."
+  Only use "while" when the two ranges are actually different from each other.
 - Same coverage: "They have a Medicare supplement under Humana."
   This applies even when each person's coverage was confirmed separately in the call.
   Never repeat coverage per person. Never write "as does his wife", "her husband also has", or any per-person coverage sentence when both share the same carrier and plan type.
@@ -989,7 +993,7 @@ ADVANTAGE, couple refused carrier, same age, no agreement:
 Heart and her husband Michael are both 69 years old and were born 1956.  They have a Medicare Advantage plan but refused to disclose from what company they have it with.
 
 MEDSUPP, couple same age range (no exact YOB), same carrier, prospect declined follow-up:
-Rebecca and her husband Chris are both over 70 years old but not over 85 years old.  They have a Medicare supplement under Blue Cross Blue Shield.
+Rebecca and her husband Chris, are both over 70 years old but not over 85 years old.  They have a Medicare supplement under Blue Cross Blue Shield.
 
 ADVANTAGE, spouse still working:
 Heart is 69 years old and was born 1956.  She has a Medicare Advantage plan but refused to disclose from what company she has it with.  Her husband is still working.  Agreed to receive a call from our Medicare specialist.
@@ -1670,11 +1674,4 @@ async function validateAndWriteLeadsheet(gradePrefix) {
 
   // Write via iframe — works on file:// protocol
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'display:none;position:absolute;width:1px;height:1px;';
-  iframe.src = campUrl+'?action=write&phone='+encodeURIComponent(phone)+'&note='+encodeURIComponent(noteContent);
-  document.body.appendChild(iframe);
-  setTimeout(()=>{ try{document.body.removeChild(iframe);}catch(e){} }, 6000);
-}
-</script>
-</body>
-</html>
+  iframe.style.cssText = 'display:none;position:absolute;width:1px;height:1px;
