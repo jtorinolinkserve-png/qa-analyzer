@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TMD QA Analyzer — Linkserve Solutions</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --maroon:#7B1C2E;--maroon-dark:#5A1020;--maroon-light:#F5EAEC;--maroon-mid:#A84D5E;
+  --gray:#6B6B6B;--gray-light:#F2F2F2;--gray-mid:#D0D0D0;--gray-dark:#3A3A3A;
+  --green:#2E6B3E;--green-light:#E8F5EC;--green-mid:#5A9A6A;
+  --red:#C0392B;--red-light:#FEE8E8;
+  --amber:#C8962A;--amber-light:#FFF8E6;
+  --blue:#2D4E9E;--blue-light:#EEF3FF;
+  --bg:#F5F5F5;--white:#FFFFFF;
+  --text:#1A1A1A;--text-mid:#555;--text-light:#909090;
+  --border:#E0E0E0;--border-mid:#C4C4C4;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+/* TOPBAR */
+.topbar{background:var(--maroon-dark);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--maroon-mid)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.logo{width:32px;height:32px;background:var(--white);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--maroon)}
+.topbar-title{color:#fff;font-size:15px;font-weight:700}
+.topbar-sub{color:rgba(255,255,255,.4);font-size:12px;margin-left:4px}
+.om-btn{padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.85);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.om-btn:hover{background:rgba(255,255,255,.1)}
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:20px 24px;max-width:1280px;margin:0 auto;align-items:start}
+/* CARDS */
+.card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card:last-child{margin-bottom:0}
+.step-eye{font-size:10px;font-weight:700;color:var(--maroon);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px}
+.section-label{font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.divider{height:1px;background:var(--border);margin:14px 0}
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border-mid);border-radius:8px;padding:26px 20px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.upload-zone:hover{border-color:var(--maroon);background:var(--maroon-light)}
+.upload-zone.has-file{border-color:var(--green-mid);background:var(--green-light);border-style:solid}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+/* FIELDS */
+.field label{font-size:11px;color:var(--text-mid);display:block;margin-bottom:3px;font-weight:500}
+.field input,.field select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus{border-color:var(--maroon)}
+/* BUTTONS */
+.btn-primary{width:100%;padding:11px;border-radius:8px;border:none;background:var(--maroon);color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s}
+.btn-primary:hover{background:var(--maroon-dark)}
+.btn-primary:disabled{background:var(--border-mid);cursor:not-allowed}
+.btn-outline{width:100%;padding:10px;border-radius:8px;border:2px solid var(--maroon);background:var(--white);color:var(--maroon);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s}
+.btn-outline:hover{background:var(--maroon);color:#fff}
+.btn-outline.copied{background:var(--green-light);border-color:var(--green-mid);color:var(--green)}
+.btn-submit{width:100%;padding:10px;border-radius:8px;border:none;background:var(--maroon);color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;margin-top:8px}
+.btn-submit:hover{background:var(--maroon-dark)}
+.btn-submit:disabled{background:var(--border-mid);cursor:not-allowed}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* TRANSCRIPT */
+.transcript-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;line-height:1.8;max-height:220px;overflow-y:auto}
+.spk-c{color:var(--maroon);font-weight:700;font-size:10px;display:inline-block;min-width:68px;letter-spacing:.04em}
+.spk-p{color:var(--text-light);font-weight:700;font-size:10px;display:inline-block;min-width:68px;letter-spacing:.04em}
+/* SCORING */
+.crit-row{display:grid;grid-template-columns:1fr auto;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.crit-row:last-child{border-bottom:none}
+.crit-name{font-size:13px;color:var(--text);font-weight:500}
+.crit-hint{font-size:10px;color:var(--text-light);margin-top:1px}
+.pills{display:flex;gap:4px}
+.pill{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;color:var(--text-light)}
+.pill:hover{border-color:var(--maroon);color:var(--maroon)}
+.pill.ai{background:var(--maroon-light);color:var(--maroon);border-color:var(--maroon-mid)}
+.pill.sel{background:var(--maroon);color:#fff;border-color:var(--maroon)}
+/* FLAGS */
+.flag{display:flex;gap:10px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;margin-top:8px}
+.flag-dnq{background:var(--amber-light);border:1px solid #e6c84a;color:#6b4e00}
+.flag-cb{background:var(--blue-light);border:1px solid #99aadd;color:var(--blue)}
+.flag-geo{background:#fff0f8;border:1px solid #e0a0c8;color:#6b1a50}
+/* SCORE */
+.score-big{font-size:40px;font-weight:800;line-height:1}
+.grade-badge{display:inline-flex;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-top:6px}
+.gA{background:var(--green-light);color:var(--green)}
+.gB{background:var(--blue-light);color:var(--blue)}
+.gC{background:var(--amber-light);color:var(--amber)}
+.gNI{background:#fff0e0;color:#7a3500}
+.gCR{background:var(--red-light);color:var(--red)}
+.gCB{background:var(--blue-light);color:var(--blue)}
+.gINV{background:var(--maroon-light);color:var(--maroon)}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;margin:10px 0 4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .4s}
+/* DISPOSITION */
+.disp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.disp-btn{padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;color:var(--text-mid)}
+.disp-btn:hover{border-color:var(--maroon);color:var(--maroon)}
+.disp-btn.dPass{background:var(--green-light);border-color:var(--green-mid);color:var(--green)}
+.disp-btn.dFail{background:var(--red-light);border-color:#cc5555;color:var(--red)}
+.disp-btn.dCallback{background:var(--blue-light);border-color:#6688cc;color:var(--blue)}
+.disp-btn.dInvalid{background:var(--maroon-light);border-color:var(--maroon-mid);color:var(--maroon)}
+/* OVERRIDE */
+.override-panel{background:var(--amber-light);border:1px solid #e6c84a;border-radius:8px;padding:12px;margin-top:10px;display:none}
+.override-panel.open{display:block}
+.override-toggle{width:100%;padding:8px;border-radius:6px;border:1px solid var(--border-mid);background:var(--white);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer;margin-top:10px}
+.override-toggle:hover{border-color:var(--amber);color:var(--amber)}
+.override-select{width:100%;padding:7px 10px;border:1px solid #e6c84a;border-radius:6px;font-size:12px;color:var(--text);background:var(--white);outline:none;margin-bottom:8px}
+/* TEXTAREA */
+textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:var(--bg);resize:none;outline:none;line-height:1.6;font-family:inherit;transition:border-color .15s}
+textarea:focus{border-color:var(--maroon)}
+/* CHIPS */
+.chip{font-size:11px;color:var(--text-mid);background:var(--maroon-light);padding:3px 9px;border-radius:12px;border:1px solid var(--maroon-mid);display:inline-block;margin:0 3px 3px 0}
+/* EMPTY */
+.empty{text-align:center;padding:36px 20px;color:var(--text-light);font-size:12px}
+/* OM OVERLAY */
+.overlay{display:none;position:fixed;inset:0;background:rgba(30,20,20,.6);z-index:1000;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.om-modal{background:var(--white);border-radius:14px;width:700px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.om-modal-head{background:var(--maroon-dark);padding:18px 24px;border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--maroon-mid)}
+.om-modal-head span{color:#fff;font-size:15px;font-weight:700}
+.om-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;line-height:1}
+.om-close:hover{color:#fff}
+.om-body{padding:20px 24px}
+.pw-box{padding:40px 24px;text-align:center}
+.pw-box input{width:240px;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;text-align:center;outline:none;margin:16px auto 0;display:block;letter-spacing:.1em}
+.pw-box input:focus{border-color:var(--maroon)}
+.pw-submit{margin:12px auto 0;display:block;padding:9px 28px;border-radius:8px;border:none;background:var(--maroon);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.pw-error{color:var(--red);font-size:12px;margin-top:8px;min-height:18px}
+.om-label{font-size:11px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.om-input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:var(--white);outline:none;margin-bottom:10px}
+.om-input:focus{border-color:var(--maroon)}
+.om-textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:var(--white);outline:none;resize:none;font-family:inherit;line-height:1.6;margin-bottom:10px}
+.om-textarea:focus{border-color:var(--maroon)}
+.camp-item{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.camp-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);cursor:pointer}
+.camp-head:hover{background:var(--maroon-light)}
+.camp-body{padding:14px;border-top:1px solid var(--border);display:none}
+.camp-body.open{display:block}
+.req-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.req-toggle{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text-mid);background:var(--bg)}
+.req-toggle.on{background:var(--maroon-light);border-color:var(--maroon-mid);color:var(--maroon);font-weight:600}
+.req-toggle input{display:none}
+.script-tab{padding:5px 12px;border-radius:6px;border:1px solid var(--border-mid);background:var(--white);color:var(--text-mid);font-size:11px;font-weight:600;cursor:pointer}
+.script-tab.active{background:var(--maroon);color:#fff;border-color:var(--maroon)}
+.tag-wrap{border:1px solid var(--border);border-radius:6px;background:var(--white);padding:6px;display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;min-height:38px;cursor:text}
+.tag-wrap:focus-within{border-color:var(--maroon)}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;background:var(--maroon-light);color:var(--maroon);font-size:11px;font-weight:600}
+.tag-x{cursor:pointer;font-size:13px;color:var(--maroon-mid)}
+.tag-x:hover{color:var(--red)}
+.tag-input{border:none;outline:none;font-size:12px;color:var(--text);background:transparent;min-width:120px;flex:1;padding:2px 4px}
+.add-camp-btn{width:100%;padding:10px;border-radius:8px;border:2px dashed var(--border-mid);background:var(--white);color:var(--text-mid);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.add-camp-btn:hover{border-color:var(--maroon);color:var(--maroon)}
+.save-btn{padding:8px 18px;border-radius:6px;border:none;background:var(--maroon);color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+.save-btn:hover{background:var(--maroon-dark)}
+.ghost-btn{padding:7px 14px;border-radius:6px;border:1px solid var(--border-mid);background:var(--white);color:var(--text-mid);font-size:12px;font-weight:600;cursor:pointer}
+.ghost-btn:hover{border-color:var(--maroon);color:var(--maroon)}
+.danger-btn{padding:7px 14px;border-radius:6px;border:1px solid #f0c0c0;background:var(--red-light);color:var(--red);font-size:11px;font-weight:600;cursor:pointer}
+.legend{display:flex;gap:14px;margin-bottom:12px}
+.legend-dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.campaign-rules{background:var(--maroon-light);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--maroon);margin-top:8px;line-height:1.7}
+.status-msg{font-size:11px;margin-top:6px;min-height:16px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">LS</div>
+    <div><span class="topbar-title">TMD QA Analyzer</span><span class="topbar-sub">Linkserve Solutions</span></div>
+  </div>
+  <button class="om-btn" onclick="openOM()">⚙ OM Settings</button>
+</div>
+
+<!-- OM OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="om-modal">
+    <div class="om-modal-head">
+      <span>⚙ OM Settings</span>
+      <button class="om-close" onclick="closeOM()">✕</button>
+    </div>
+    <div class="om-body">
+      <div id="pwBox" class="pw-box">
+        <div style="font-size:28px">🔒</div>
+        <div style="font-size:15px;font-weight:700;margin-top:8px">OM Access Only</div>
+        <div style="font-size:12px;color:var(--text-light);margin-top:4px">Enter password to manage settings</div>
+        <input type="password" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter')checkPW()">
+        <button class="pw-submit" onclick="checkPW()">Unlock</button>
+        <div class="pw-error" id="pwErr"></div>
+      </div>
+      <div id="omPanel" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:700">Campaign Settings</div>
+          <button class="ghost-btn" onclick="lockOM()">🔒 Lock</button>
+        </div>
+        <!-- API KEY SECTION -->
+        <div style="background:var(--maroon-light);border:1px solid var(--maroon-mid);border-radius:8px;padding:12px 14px;margin-bottom:16px">
+          <div class="om-label" style="color:var(--maroon)">Groq API key</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <input type="password" id="keyInput" class="om-input" style="margin-bottom:0;font-family:monospace;flex:1" placeholder="gsk_...">
+            <button class="save-btn" onclick="updateKey()">Update</button>
+            <span id="keySavedMsg" style="font-size:11px;color:var(--green);display:none;font-weight:600">✓ Updated</span>
+          </div>
+          <div style="font-size:11px;color:var(--maroon);margin-top:5px">Shared across all CMs. Update here when you rotate your key.</div>
+        </div>
+        <div style="background:var(--gray-light);border:1px solid var(--border-mid);border-radius:8px;padding:12px 14px;margin-bottom:16px">
+          <div class="om-label">Google Apps Script URL <span style="font-size:10px;font-weight:400;color:var(--text-light);text-transform:none">(for Submit to QA Tracker)</span></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <input type="text" id="scriptUrlInput" class="om-input" style="margin-bottom:0;font-size:11px;flex:1" placeholder="https://script.google.com/macros/s/...">
+            <button class="save-btn" onclick="updateScriptUrl()">Save</button>
+            <span id="urlSavedMsg" style="font-size:11px;color:var(--green);display:none;font-weight:600">✓ Saved</span>
+          </div>
+          <div style="font-size:11px;color:var(--text-mid);margin-top:5px">Paste your deployed QA Tracker Apps Script Web App URL here.</div>
+        </div>
+        <!-- CAMPAIGN LIST -->
+        <div id="campList"></div>
+        <button class="add-camp-btn" onclick="addCamp()">+ Add new campaign</button>
+        <div style="height:1px;background:var(--border);margin:16px 0"></div>
+        <div style="display:flex;justify-content:space-between">
+          <button class="danger-btn" onclick="resetCamps()">↺ Reset to defaults</button>
+          <div style="display:flex;gap:8px">
+            <button class="ghost-btn" onclick="closeOM()">Close</button>
+            <button class="save-btn" onclick="saveAll()">💾 Save all</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- LEFT -->
+  <div>
+    <!-- STEP 1 -->
+    <div class="card">
+      <div class="step-eye">Step 1</div>
+      <div class="card-title">Upload call recording</div>
+      <div class="upload-zone" id="dropZone">
+        <input type="file" id="audioInput" accept="audio/*" onchange="onFile(event)">
+        <div style="font-size:26px;margin-bottom:6px">🎙️</div>
+        <div style="font-size:13px;font-weight:600" id="dropLabel">Drop recording here or click to browse</div>
+        <div style="font-size:11px;color:var(--text-light)">MP3 · WAV · M4A · up to 25MB</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px">
+        <div class="field"><label>Caller name</label><input type="text" id="callerName" placeholder="e.g. Madison"></div>
+        <div class="field"><label>Campaign</label>
+          <select id="campSelect" onchange="onCampChange()">
+            <option value="">— Select —</option>
+          </select>
+        </div>
+        <div class="field"><label>Phone number</label><input type="text" id="phoneNum" placeholder="e.g. 864-838-3232"></div>
+      </div>
+      <div id="campPreview" style="display:none"></div>
+      <button class="btn-primary" id="analyzeBtn" onclick="runAnalysis()" disabled style="margin-top:12px">
+        <span id="analyzeLbl">Transcribe &amp; Analyze</span>
+      </button>
+    </div>
+    <!-- TRANSCRIPT -->
+    <div class="card" id="txCard" style="display:none">
+      <div class="step-eye">Step 2 — Transcript</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-title" style="margin-bottom:0">Call transcript</div>
+        <span style="font-size:11px;background:var(--green-light);color:var(--green);padding:3px 9px;border-radius:12px;font-weight:700">Whisper via Groq</span>
+      </div>
+      <div id="txMeta" style="margin-bottom:10px"></div>
+      <div class="transcript-box" id="txBox"></div>
+    </div>
+    <!-- CALL INFO -->
+    <div class="card" id="callInfoCard" style="display:none">
+      <div class="step-eye">Step 3 — Call Information</div>
+      <div class="card-title">Information obtained in call</div>
+      <div id="callInfoContent"></div>
+    </div>
+    <!-- SCORING -->
+    <div class="card" id="scoreCard" style="display:none">
+      <div class="step-eye">Step 4 — Review scores</div>
+      <div class="card-title">QA scoring</div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:var(--maroon-light);border:1px solid var(--maroon-mid)"></span> <span style="font-size:11px;color:var(--text-mid)">AI suggested</span></span>
+        <span><span class="legend-dot" style="background:var(--maroon)"></span> <span style="font-size:11px;color:var(--text-mid)">Your selection</span></span>
+      </div>
+      <div id="criteriaRows"></div>
+      <div id="flagsArea"></div>
+    </div>
+    <!-- AI NOTES -->
+<div class="card" id="notesCard" style="display:none">
+  <div class="step-eye">Step 5 — AI Notes</div>
+  <div class="card-title">AI Generated Notes</div>
+
+  <textarea
+    id="aiNotes"
+    rows="6"
+    placeholder="AI-generated notes will appear here."
+  ></textarea>
+</div>
+    <!-- FEEDBACK -->
+    <div class="card" id="fbCard" style="display:none">
+      <div class="step-eye">Step 6 — Feedback</div>
+      <div class="card-title">QA feedback &amp; action plan</div>
+      <div style="margin-bottom:10px">
+        <div class="section-label">QA feedback</div>
+        <textarea id="feedback" rows="4" placeholder="AI-generated feedback will appear here. Edit as needed."></textarea>
+      </div>
+      <div>
+        <div class="section-label">Action plan</div>
+        <textarea id="actionPlan" rows="3" placeholder="Recommended coaching actions..."></textarea>
+      </div>
+    </div>
+  </div>
+  <!-- RIGHT -->
+  <div>
+    <div class="card">
+      <div class="section-label">Score</div>
+      <div id="scoreSummary"><div class="empty"><div style="font-size:28px;margin-bottom:8px">📋</div>Score appears after analysis</div></div>
+    </div>
+    <div class="card">
+      <div class="section-label">Disposition</div>
+      <div class="disp-grid">
+        <button class="disp-btn" onclick="setDisp('Pass')">✓ Pass</button>
+        <button class="disp-btn" onclick="setDisp('Fail')">✗ Fail</button>
+        <button class="disp-btn" onclick="setDisp('Callback')">↩ Callback</button>
+        <button class="disp-btn" onclick="setDisp('Invalid')">⊘ Invalid</button>
+      </div>
+      <button class="override-toggle" id="overrideToggle" onclick="toggleOverride()">✎ Override AI grade</button>
+      <div class="override-panel" id="overridePanel">
+        <div class="om-label" style="margin-bottom:6px">Override grade</div>
+        <select class="override-select" id="overrideGrade" onchange="updateScore()">
+          <option value="">— Select grade —</option>
+          <option value="Graded A">Graded A (Pass)</option>
+          <option value="Graded B">Graded B (Pass)</option>
+          <option value="Graded C">Graded C (Fail)</option>
+          <option value="QA Failed - Needs Improvement">QA Failed - Needs Improvement</option>
+          <option value="QA Failed - Critical">QA Failed - Critical</option>
+          <option value="Callback">Callback</option>
+          <option value="Invalid">Invalid</option>
+        </select>
+        <div class="om-label" style="margin-bottom:6px">Reason <span style="color:var(--red)">*</span></div>
+        <textarea id="overrideReason" rows="2" placeholder="Required — explain why you are overriding. e.g. Caller is a new hire, leniency applied on script adherence." style="border-color:#e6c84a"></textarea>
+        <div style="font-size:11px;color:var(--amber);margin-top:4px">Both AI grade and override will appear in export.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-label">QA analyst</div>
+      <div class="field" style="margin-bottom:8px"><label>Analyst name</label><input type="text" id="analystName" placeholder="Your name"></div>
+      <div class="field"><label>Date of evaluation</label><input type="date" id="evalDate"></div>
+      <div class="divider"></div>
+      <div class="section-label">Export</div>
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:10px">Tab-separated row ready to paste into QA Tracker.</p>
+      <button class="btn-outline" id="copyBtn" onclick="copyRow()">📋 Copy row to clipboard</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitToSheet()">📤 Submit to QA Tracker</button>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────────
+const GROQ_KEY_DEFAULT = '';
+
+// Round-robin key rotation — keys stored in localStorage as JSON array
+function getNextKey() {
+  let keys = [];
+  try { keys = JSON.parse(localStorage.getItem('tmd_groq_keys') || '[]'); } catch(_) {}
+  // Fall back to legacy single-key if no array set
+  if (!keys.length) {
+    const single = localStorage.getItem('groq_key') || GROQ_KEY_DEFAULT;
+    return single;
+  }
+  let idx = parseInt(localStorage.getItem('tmd_groq_key_idx') || '0');
+  const key = keys[idx % keys.length];
+  localStorage.setItem('tmd_groq_key_idx', (idx + 1) % keys.length);
+  return key;
+}
+// Keep groqKey as alias for legacy references (Whisper call)
+Object.defineProperty(window, 'groqKey', { get: getNextKey });
+
+const OM_PASS = 'Linkserve123_';
+const SHEET_ID = '1Lx0ajz26zq-ABUEQlMMvQwTcoFCBz5YBwCZqSvUIa_Q';
+let APPS_SCRIPT_URL = localStorage.getItem('tmd_script_url') || 'https://script.google.com/macros/s/AKfycbylwJGCMEXF8vRmBhZvMk4TvJMal-z4iN7xTSQHvDxG4wX-k_Jk8jK2snMuqHfIfBHo4Q/exec';
+// LEADSHEET_URL is stored per-campaign (camp.leadsheetUrl)
+const CAMP_KEY = 'tmd_qa_camps_v4';
+
+let omOpen = false;
+let camps = null;
+const CRITERIA = [
+  {id:'opening', label:'Opening spiel', hint:'Introduction & caller identification'},
+  {id:'tone',    label:'Tone & clarity', hint:'Delivery, confidence, energy'},
+  {id:'probing', label:'Probing questions', hint:'Qualification & active listening'},
+  {id:'script',  label:'Script adherence', hint:'Following the campaign script'},
+  {id:'objections', label:'Handling objections', hint:'Addressing concerns & emotional cues'},
+  {id:'closing', label:'Closing spiel', hint:'Proper call close'},
+  {id:'compliance', label:'Compliance', hint:'Qualification, DNC'},
+  {id:'callflow', label:'Overall call flow', hint:'Structure & call control'}
+];
+
+const BASE_DNQS = [
+  'Below 64 years old','Still working','State retiree / has State plan',
+  'ObamaCare / TrumpCare / ACA plan','Federal or Government retiree',
+  'Has VA / CHAMPVA / Tricare AND on disability (Disabled Veteran)',
+  'Group Insurance','Union Plan','Moved out of State','Living in a nursing home'
+];
+const BASE_REQ = ['Date of birth','Full name','Zip code','Current coverage/plan'];
+
+let ST = {
+  file:null, transcript:'', scores:{}, aiScores:{},
+  disp:'', dnqFlags:[], cbFlags:[], geoFlags:[], activeCamp:null
+};
+
+// ─── STORAGE ──────────────────────────────────────────────────────────────────
+function saveCamps(data) {
+  camps = data;
+  try { localStorage.setItem(CAMP_KEY, JSON.stringify(data)); } catch(e) {}
+  try {
+    const enc = encodeURIComponent(JSON.stringify(data));
+    document.cookie = CAMP_KEY+'='+enc+'; max-age=31536000; path=/';
+  } catch(e) {}
+}
+
+function getCamps() {
+  if (camps) return camps;
+  try {
+    const v = localStorage.getItem(CAMP_KEY);
+    if (v) { camps = JSON.parse(v); return camps; }
+  } catch(e) {}
+  try {
+    const m = document.cookie.split('; ').find(r=>r.startsWith(CAMP_KEY+'='));
+    if (m) { camps = JSON.parse(decodeURIComponent(m.split('=').slice(1).join('='))); return camps; }
+  } catch(e) {}
+  camps = defaultCamps();
+  return camps;
+}
+
+// ─── DEFAULT CAMPAIGNS ────────────────────────────────────────────────────────
+function defaultCamps() {
+  return [{
+    id:'aims', name:'AIMS - MedSupp', surveyType:'MedSupp + Life + T65',
+    extraDnqs:[], geoFocus:'NC counties: Alexander, Anson, Burke, Cabarrus, Caldwell, Catawba, Cleveland, Gaston, Iredell, Lincoln, Mecklenburg, Rowan, Stanly, Union. SC counties: Cherokee, Lancaster, York.',
+    requiredFields:['Date of birth','Full name','Zip code','Current coverage/plan'],
+    notes:'Age 65-85 MedSupp, 40-85 Life. Transitions: MedSupp→Life if DNQ, MedSupp→T65 if turning 65. No repeat opening on transitions.',
+    leadsheetUrl:'',
+    carriers:['AARP','UnitedHealthcare','Aetna','Aflac','Blue Cross Blue Shield','BCBS','Cigna','Humana','Mutual of Omaha','Transamerica','Bankers Life','Colonial Penn','Globe Life','American National','Physicians Mutual','Foresters','Gerber Life','New Era Life','Devoted','Allstate','State Farm','Prudential','MetLife','Lincoln Heritage','National General','Medico','United American','Washington National','Manhattan Life','Lumico','GPM Life','Pekin Life','Ohio National','Sentinel Security'],
+    scripts:{
+      medsup:'AIMS MEDSUP SCRIPT (SHORTENED)\n\nAGE RESTRICTION: 65-85\n\nOPENING: Hi, I am looking for Mr/Mrs ___. My name is ___, calling from the Medicare Supplement Division. We are conducting a brief survey to help Medicare recipients lower their costs.\n\nQ1. I am assuming you have a Medicare Supplement program. Is that correct?\n YES: Q2. NO: But are you on Medicare? YES: Do you have secondary insurance? Has secondary: Q2. No secondary: Just to confirm Medicare ONLY, correct? Starred questions. NO: Life survey.\n\nQ2. What company do you have your secondary plan with? (BCBS, Aetna, United Healthcare, Mutual of Omaha, Cigna, Humana)\n\nQ3. Are you married? NO: age+YOB. YES: Is spouse covered under same company? Same: confirm. Different: what company?\n\nQ4. What is your current age? Born in ___ or ___? Spouse age and YOB if applicable. If refuses: safe to say over 65 not over 85? If below age: Life survey. If age/YOB mismatch: clarify.\n\nVERIFICATION: First name ___ last name ___ correct? Spouse name? Address? Phone number?\n\nCLOSING QUALIFIED: Ok great! A Medicare Specialist will review your information and get back to you in a couple of days. Free and no obligation. Thank you!\nCLOSING DNQ: Alright, that is all I need. Thank you and have a great day!\n\nNOTES: Do NOT penalize for skipping Medicaid, monthly cost, or tobacco - not in shortened script. DO penalize: missing company, age/YOB, verification, closing.',
+      life:'LIFE INSURANCE SCRIPT (after MedSupp transition - NO repeat opening)\nAGE: 40-85\n1. Do you have life insurance? Company? Benefit amount? Type (Term/Whole/Universal)?\n2. Age and YOB?\nVerify: name, address, phone.\nClose: A Life Specialist will get back to you in a few days.',
+      t65:'T65 SCRIPT (turning 65 - NO repeat opening unless fresh start)\n1. You are currently 64 turning 65 in (month). Correct?\n2. Started researching plans?\nVerify: name, address, phone, DOB, tobacco, working, secondary insurance, married, spouse on Medicare?\nClose: Expect a call in 7-10 days for free no-obligation quote.'
+    },
+    guidelines:'FULL GUIDELINES (edge cases only)\n\nGEO: NC counties: Alexander, Anson, Burke, Cabarrus, Caldwell, Catawba, Cleveland, Gaston, Iredell, Lincoln, Mecklenburg, Rowan, Stanly, Union. SC counties: Cherokee, Lancaster, York. Cities: Charlotte, Gastonia, Concord, Kannapolis, Hickory, Monroe, Salisbury, Mooresville, Gaffney, Lancaster, Rock Hill. Only flag if clearly outside these areas.\n\nQUALIFICATION: Medicare+own supplement=QUALIFIED. Medicare only=QUALIFIED excellent lead. Medicare+retirement paying out of pocket=QUALIFIED. Medicare+retirement NOT paying: Supplement=DNQ, Advantage=QUALIFIED. Medicare+VA/Tricare only: starred questions. Medicare+Medicaid confirmed=UNQUALIFIED unless Advantage. Disabled vet VA+Medicaid=UNQUALIFIED. Medicare Advantage HMO/PPO=QUALIFIED Advantage route. Not on Medicare: Life survey. Age 63 below=UNQUALIFIED. Age 85: confirm not turning 86 within month.\n\nTWO COMPANIES: BCBS+Humana for prescription=no probing needed. BCBS+Humana no clarification=MUST clarify. CALLBACK if not clarified.\n\nCLOSING RULES: Uhuh/ok/no response after closing=SALE. Refused follow-up=SALE. Hung up before closing=CALLBACK.\n\nREBUTTALS: Not interested: We are not selling anything. Just a brief survey. | Why calling: Medicare has had many changes, people being overcharged. | What company: Calling on behalf of Medicare Supplement Division of Connectus. | Are you from Medicare: No, we work with Medicare-approved companies. | Callback: 980-939-8005.'
+  }];
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.onload = function() {
+  document.getElementById('evalDate').value = new Date().toISOString().split('T')[0];
+
+  try {
+    const savedUrl = localStorage.getItem('tmd_script_url');
+    if (savedUrl) APPS_SCRIPT_URL = savedUrl;
+  } catch(e) {}
+
+  renderCriteria();
+  fillCampDropdown();
+};
+// ─── CRITERIA ─────────────────────────────────────────────────────────────────
+function renderCriteria() {
+  document.getElementById('criteriaRows').innerHTML = CRITERIA.map(c=>`
+    <div class="crit-row">
+      <div><div class="crit-name">${c.label}</div><div class="crit-hint">${c.hint}</div></div>
+      <div class="pills" id="pills_${c.id}">
+        ${[1,2,3,4,5].map(n=>`<div class="pill" id="pill_${c.id}_${n}" onclick="setPill('${c.id}',${n})">${n}</div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function setPill(cid, score) {
+  ST.scores[cid] = score;
+  [1,2,3,4,5].forEach(n=>{
+    const el = document.getElementById('pill_'+cid+'_'+n);
+    const isAI = ST.aiScores[cid]===n;
+    el.className = 'pill'+(isAI&&n!==score?' ai':'')+(n===score?' sel':'');
+  });
+  updateScore();
+}
+
+function applyAI(scores) {
+  ST.aiScores = scores;
+  CRITERIA.forEach(c=>{
+    const s = scores[c.id]||3;
+    ST.scores[c.id] = s;
+    [1,2,3,4,5].forEach(n=>{
+      document.getElementById('pill_'+c.id+'_'+n).className = 'pill'+(n===s?' ai sel':'');
+    });
+  });
+  updateScore();
+}
+
+function total() { return CRITERIA.reduce((s,c)=>s+(ST.scores[c.id]||0),0); }
+
+function gradeInfo(t) {
+  if (ST.disp==='Callback') return {label:'Callback',cls:'gCB'};
+  if (ST.disp==='Invalid') return {label:'Invalid',cls:'gINV'};
+  if (t>=36) return {label:'Graded A — Pass',cls:'gA'};
+  if (t>=30) return {label:'Graded B — Pass',cls:'gB'};
+  if (t>=24) return {label:'Graded C — Fail',cls:'gC'};
+  if (t>=16) return {label:'QA Failed – Needs Improvement',cls:'gNI'};
+  return {label:'QA Failed – Critical',cls:'gCR'};
+}
+
+function updateScore() {
+  const t = total(); const g = gradeInfo(t);
+  const pct = Math.round(t/40*100);
+  const bar = t>=30?'var(--green)':t>=24?'var(--amber)':'var(--red)';
+  const ov = document.getElementById('overrideGrade')?.value||'';
+  const ovR = document.getElementById('overrideReason')?.value||'';
+  const ovBlock = ov ? `
+    <div style="margin-top:10px;padding:10px 12px;background:var(--amber-light);border:1px solid #e6c84a;border-radius:8px;">
+      <div style="font-size:10px;font-weight:700;color:var(--amber);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">✎ Grade Override</div>
+      <div style="font-size:13px;font-weight:700;color:var(--gray-dark)">${ov}</div>
+      ${ovR ? `<div style="font-size:11px;color:var(--text-mid);margin-top:4px;line-height:1.5">${ovR}</div>` : '<div style="font-size:11px;color:var(--red);margin-top:4px">⚠ No reason provided</div>'}
+    </div>` : '';
+  document.getElementById('scoreSummary').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span class="score-big">${t}</span><span style="font-size:14px;color:var(--text-light)">/ 40</span>
+        </div>
+        <div style="margin-top:4px"><span class="grade-badge ${g.cls}">${g.label}</span></div>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${bar}"></div></div>
+    <div style="font-size:11px;color:var(--text-light)">${pct}% of max score</div>
+    ${ovBlock}`;
+}
+
+function setDisp(v) {
+  ST.disp = v;
+  document.querySelectorAll('.disp-btn').forEach(b=>{
+    const bv = b.textContent.replace(/[✓✗↩⊘] /,'').trim();
+    b.className = 'disp-btn'+(bv===v?' d'+v:'');
+  });
+  updateScore();
+}
+
+function toggleOverride() {
+  const p = document.getElementById('overridePanel');
+  const t = document.getElementById('overrideToggle');
+  const open = p.classList.contains('open');
+  if (open) {
+    p.classList.remove('open');
+    t.textContent = '✎ Override AI grade';
+    document.getElementById('overrideGrade').value = '';
+    document.getElementById('overrideReason').value = '';
+    updateScore();
+  } else {
+    p.classList.add('open');
+    t.textContent = '✕ Cancel override';
+  }
+}
+
+// ─── CAMPAIGN ─────────────────────────────────────────────────────────────────
+function fillCampDropdown() {
+  const list = getCamps();
+  const sel = document.getElementById('campSelect');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select campaign —</option>';
+  list.forEach(c=>{
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+}
+
+function onCampChange() {
+  const id = document.getElementById('campSelect').value;
+  const prev = document.getElementById('campPreview');
+  if (!id) { ST.activeCamp=null; prev.style.display='none'; return; }
+  const c = getCamps().find(x=>x.id===id);
+  if (!c) return;
+  ST.activeCamp = c;
+  let html = '<div class="campaign-rules"><strong>'+c.name+'</strong>';
+  if (c.geoFocus) html += '<br>📍 '+c.geoFocus;
+  if (c.extraDnqs&&c.extraDnqs.length) html += '<br>➕ Extra DNQs: '+c.extraDnqs.join(', ');
+  if (c.notes) html += '<br>📝 '+c.notes;
+  html += '</div>';
+  prev.innerHTML = html; prev.style.display='';
+}
+
+// ─── FILE ─────────────────────────────────────────────────────────────────────
+function onFile(e) {
+  const f = e.target.files[0]; if(!f) return;
+  ST.file = f;
+  document.getElementById('dropLabel').textContent = '🎵 '+f.name;
+  document.getElementById('dropZone').classList.add('has-file');
+  document.getElementById('analyzeBtn').disabled = false;
+
+  // Auto-fill phone from filename if field is currently empty
+  const phoneEl = document.getElementById('phoneNum');
+  if (!phoneEl.value.trim()) {
+    const chunks = f.name.replace(/\D+/g, ' ').trim().split(/\s+/);
+    for (const chunk of chunks) {
+      if (chunk.length === 11 && chunk[0] === '1') { phoneEl.value = chunk.slice(1); break; }
+      if (chunk.length === 10)                      { phoneEl.value = chunk;          break; }
+    }
+  }
+}
+
+// ─── ANALYSIS ─────────────────────────────────────────────────────────────────
+async function separateSpeakers(rawTranscript) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + getNextKey()
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 2200,
+      temperature: 0,
+      messages: [
+        {
+          role: 'system',
+          content: `You are reviewing an outbound telemarketing call transcript for QA.
+
+First determine the call type:
+
+1. LIVE_CONVERSATION
+2. ANSWERING_MACHINE
+3. DEAD_AIR
+4. UNCLEAR_AUDIO
+
+Important rules:
+- If only one voice is present, classify as ANSWERING_MACHINE or DEAD_AIR.
+- Do NOT invent prospect responses.
+- Do NOT create a conversation if only one side is audible.
+- Correct obvious speaker-labeling errors.
+Preserve the original conversation flow.
+
+Do NOT summarize.
+
+Do NOT combine multiple caller statements into one block.
+
+Do NOT combine multiple prospect responses into one block.
+
+Keep every speaker turn separate and in chronological order.
+
+Example:
+
+CALLER: Hello, may I speak with John?
+PROSPECT: This is John.
+
+CALLER: Are you on Medicare?
+PROSPECT: Yes.
+
+CALLER: Are you married?
+PROSPECT: Yes.
+
+Maintain this format throughout the entire transcript.
+CALLER usually:
+- introduces the call
+- asks survey or qualification questions
+- verifies name, age, DOB, address, zip code, phone number
+- explains next steps
+- closes the call
+
+PROSPECT usually:
+- answers questions
+- asks for clarification
+- gives objections
+- confirms or refuses information
+
+If a PROSPECT line contains verification questions, Medicare qualification questions, age/DOB questions, address verification, phone verification, or closing statements, it is likely the CALLER and should be corrected.
+
+Return only this format:
+
+CALL_TYPE: LIVE_CONVERSATION
+RELIABILITY: HIGH / MEDIUM / LOW
+
+CALLER: ...
+PROSPECT: ...
+
+If answering machine:
+
+CALL_TYPE: ANSWERING_MACHINE
+RELIABILITY: LOW
+
+CALLER: ...
+
+If dead air:
+
+CALL_TYPE: DEAD_AIR
+RELIABILITY: LOW`
+        },
+        {
+          role: 'user',
+          content: rawTranscript
+        }
+      ]
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.error?.message || 'Speaker separation failed');
+  }
+
+  const data = await res.json();
+  return data.choices[0].message.content.trim();
+}
+// ─── CALL INFORMATION EXTRACTION ──────────────────────────────────────────────
+function renderCallInfo(info) {
+  if (!info) return;
+
+  // Helper: one label+value cell pair
+  const cell = (label, val, req=false) => {
+    const got = val !== null && val !== undefined && val !== '';
+    const icon = got
+      ? `<span style="color:var(--green);font-weight:700;margin-right:3px">✓</span>`
+      : `<span style="color:${req?'var(--red)':'var(--border-mid)'};margin-right:3px">${req?'✗':'—'}</span>`;
+    const display = got
+      ? `<span style="color:var(--text)">${val}</span>`
+      : `<span style="color:var(--text-light);font-style:italic">—</span>`;
+    return `<td style="font-size:11px;color:var(--text-light);padding:4px 8px 4px 0;white-space:nowrap;vertical-align:top;width:90px">${label}</td>`
+         + `<td style="font-size:11px;padding:4px 16px 4px 0;border-bottom:1px solid var(--border);vertical-align:top">${icon}${display}</td>`;
+  };
+
+  const sectionHdr = (label) =>
+    `<tr><td colspan="4" style="font-size:10px;font-weight:700;color:var(--maroon);letter-spacing:.08em;text-transform:uppercase;padding:10px 0 4px;border-bottom:2px solid var(--maroon-light)">${label}</td></tr>`;
+
+  const spacer = () =>
+    `<tr><td colspan="4" style="height:6px"></td></tr>`;
+
+  const hasSpouseSection = info.has_spouse === true
+    || info.spouse_first_name || info.spouse_age
+    || info.spouse_yob || info.spouse_carrier;
+
+  let tbody = '';
+
+  // ── Prospect ──────────────────────────────────────────────────────────
+  tbody += sectionHdr('Prospect');
+  tbody += `<tr>${cell('First name', info.first_name, true)}${cell('Last name', info.last_name)}</tr>`;
+  tbody += `<tr>${cell('Carrier', info.carrier)}${cell('Phone', info.phone, true)}</tr>`;
+  tbody += `<tr>${cell('Age', info.age, true)}${cell('Address', info.address)}</tr>`;
+  tbody += `<tr>${cell('Year of birth', info.yob)}<td colspan="2"></td></tr>`;
+
+  // ── Spouse ────────────────────────────────────────────────────────────
+  if (hasSpouseSection) {
+    tbody += spacer();
+    tbody += sectionHdr('Spouse');
+    tbody += `<tr>${cell('First name', info.spouse_first_name)}${cell('Last name', info.spouse_last_name)}</tr>`;
+    tbody += `<tr>${cell('Carrier', info.spouse_carrier)}${cell('Phone', info.phone)}</tr>`;
+    tbody += `<tr>${cell('Age', info.spouse_age)}${cell('Address', info.address)}</tr>`;
+    tbody += `<tr>${cell('Year of birth', info.spouse_yob)}<td colspan="2"></td></tr>`;
+  }
+
+  let html = `<table style="width:100%;border-collapse:collapse"><tbody>${tbody}</tbody></table>`;
+
+  // ── Closing strip ─────────────────────────────────────────────────────
+  const ag   = info.agreed_to_followup;
+  const clr  = ag === true ? 'var(--green)' : ag === false ? 'var(--red)' : 'var(--text-light)';
+  const bg   = ag === true ? 'var(--green-light)' : ag === false ? 'var(--red-light)' : 'var(--gray-light)';
+  const icon = ag === true ? '✓' : ag === false ? '✗' : '—';
+  const txt  = ag === true  ? 'Agreed to receive follow-up call'
+             : ag === false ? 'Declined / Do not call'
+             : 'Closing not reached';
+  const quote = info.agreement_quote
+    ? `<span style="font-style:italic;color:var(--text-light);margin-left:4px">"${info.agreement_quote}"</span>`
+    : '';
+
+  html += `<div style="margin-top:10px;padding:5px 10px;border-radius:4px;background:${bg};display:flex;align-items:center;gap:6px;font-size:11px">
+    <span style="color:${clr};font-weight:700;font-size:13px">${icon}</span>
+    <span style="color:${clr};font-weight:600">${txt}</span>${quote}
+  </div>`;
+
+  const el = document.getElementById('callInfoContent');
+  if (el) el.innerHTML = html;
+}
+
+// ─── SANITIZER ────────────────────────────────────────────────────────────────
+const NOTES_BANNED_PATTERNS = [
+  /provided no alternate/i,
+  /no alternate (contact|phone|address)/i,
+  /did not provide/i,
+  /was not provided/i,
+  /no new (address|phone)/i,
+  /does not want/i,
+  /doesn'?t want/i,
+  /do not (call|contact)/i,
+  /don'?t (call|contact)/i,
+  /rather be contacted/i,
+  /prefers? to be contacted/i,
+  /requested (to be contacted|no (more )?calls)/i,
+  /no (more|further) calls/i,
+  /declined/i,
+  /refused to provide further/i,
+  /refused to participate/i,
+  /was not (discussed|mentioned|confirmed)/i,
+  /not discussed (in|during)/i,
+  /no (further|additional) information/i,
+  /^(he|she|prospect) is married\b/i
+];
+
+function fixSameAgeCoupleFormat(text) {
+  // Deterministically merge two same-age-range sentences into the correct "both" format.
+  // Catches all model phrasing variants (while / is also / Her husband / His wife / etc.)
+  const RANGE = '(over \\d+ years old but not over \\d+ years old)';
+
+  // Variant A: two separate sentences joined by period + spaces
+  // "Rebecca is over 70... .  Her husband Chris is also over 70..."
+  text = text.replace(
+    new RegExp(
+      '([A-Z][a-z]+) is ' + RANGE + '\\.\\s{1,4}([Hh]er|[Hh]is) (husband|wife) ([A-Z][a-z]+) is (?:also )?\\2\\.',
+      'g'
+    ),
+    (_, name1, range, pronoun, relation, name2) =>
+      `${name1} and ${pronoun.toLowerCase()} ${relation} ${name2}, are both ${range}.`
+  );
+
+  // Variant B: single sentence with "while"
+  // "Rebecca is over 70... while her husband Chris is also over 70..."
+  text = text.replace(
+    new RegExp(
+      '([A-Z][a-z]+) is ' + RANGE + ' while ([hH]er|[hH]is) (husband|wife) ([A-Z][a-z]+) is (?:also )?\\2\\.',
+      'g'
+    ),
+    (_, name1, range, pronoun, relation, name2) =>
+      `${name1} and ${pronoun.toLowerCase()} ${relation} ${name2}, are both ${range}.`
+  );
+
+  return text;
+}
+
+function sanitizeNotes(raw) {
+  const flat = raw.replace(/\s*\n+\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  const sentences = flat.match(/[^.!?]+[.!?]+/g) || [flat];
+  const kept = sentences
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .filter(s => !NOTES_BANNED_PATTERNS.some(p => p.test(s)));
+  let result = kept.join('  ').trim();
+  result = fixSameAgeCoupleFormat(result);
+  return result;
+}
+
+async function generateNotesAndCallInfo(transcript, surveyType) {
+  const res = await fetch(
+    'https://api.groq.com/openai/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getNextKey()
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0,
+        max_tokens: 1000,
+    response_format: {type:'json_object'},
+        messages: [
+          {
+            role: 'system',
+            content: `You write telemarketing lead sheet notes, exactly as a caller would type them into a lead sheet. You do NOT summarize the call.
+
+OUTPUT FORMAT
+- Return ONLY the notes paragraph. No preamble, no labels, no quotes.
+- ONE single paragraph. No line breaks. Short sentences with two spaces after every sentence.
+- Start with the prospect's first name.
+- Never repeat a name or fact already stated.
+
+SUBJECT
+- The notes are always about the Medicare-eligible prospect, even if a spouse answered the phone.
+- Mention the spouse only when the spouse has relevant coverage, provided qualification info, or their status matters (e.g. still working).
+
+MARITAL STATUS
+- If the prospect is single: add "Not married." as its own sentence.
+- If widowed: add "Widowed." as its own sentence.
+- NEVER write "He is married." or "She is married." — marriage is only ever implied by mentioning the husband/wife/spouse. There is no positive marriage sentence in house style.
+- If a husband/wife/spouse is mentioned in the notes, do NOT separately state marital status — it is already implied.
+- If marital status was never discussed, write nothing about it.
+
+COVERAGE WORDING (follow in this exact priority order)
+1. If the caller asked an assumptive question such as "it shows here that you have a Medicare supplement program, is that correct?" and the prospect answered yes (or any affirmative), the Medicare supplement IS CONFIRMED. Write "Medicare supplement".
+2. If Medicare Advantage / HMO / PPO was explicitly confirmed, write "Medicare Advantage plan". If HMO or PPO was specified, add it in parentheses after the carrier: "under Humana (HMO)".
+3. If the prospect confirmed having secondary coverage but the call NEVER established whether it is a supplement or Advantage plan, write "secondary insurance". Never name a plan type that was not confirmed.
+4. If the prospect is on Medicare with NO secondary coverage at all, write "is on Medicare but no supplement" (or "They are on Medicare but no supplement" for couples). This is an excellent lead — never call it secondary insurance.
+
+CAPITALIZATION — copy exactly
+- "Medicare supplement" (lowercase s), "Medicare Advantage plan", "Medicaid", "VA benefits", "Tricare benefits".
+
+CARRIER NAMES — exact spellings
+- "AARP through United Healthcare", "United Healthcare" (never "UnitedHealthcare")
+- "Blue Cross Blue Shield", "Mutual of Omaha", "Bankers Life", "Colonial Penn", "Wellcare"
+
+VA / TRICARE / MEDICAID — canonical sentences
+- "She is also covered by her VA benefits." / "He is also covered by his Tricare benefits."
+- Couple, both same: "They are also covered by their Tricare benefits."
+- Couple, different: "Marge is also covered by her VA benefits while John is also covered by his Tricare benefits."
+- Medicaid: "She is on Medicaid and has a Medicare supplement under Humana."
+
+AGE AND YEAR OF BIRTH
+- Always age first, then year of birth: "is 78 years old and was born 1948".
+- Never estimate, calculate, or infer any fact not explicitly stated in the call.
+- If only an age range was confirmed, copy it exactly: "is over 65 years old but not over 85 years old".
+
+MARRIED COUPLES — canonical structures (copy exactly, adjust names)
+- Both ages known: "Marge is 72 years old and was born 1952 while her husband John is 76 years old and was born 1949."
+  (No comma between "husband"/"wife" and the name.)
+- Same age (exact): "Heart and her husband Michael are both 69 years old and were born 1956."
+- Same age range (range confirmed, no exact YOB): "Rebecca and her husband Chris, are both over 70 years old but not over 85 years old."
+  RULE: When BOTH spouses confirmed the SAME age range, you MUST use this "both" format — NEVER use "while".
+  WRONG: "Rebecca is over 70 years old but not over 85 years old while her husband Chris is also over 70 years old but not over 85 years old."
+  WRONG: "Rebecca is over 70 years old but not over 85 years old while her husband is also over 70 years old but not over 85 years old."
+  CORRECT: "Rebecca and her husband Chris, are both over 70 years old but not over 85 years old."
+  The word "while" ONLY appears when the two ranges are genuinely different numbers.
+  (Never include "was born" if year of birth was not explicitly stated.)
+- Different age ranges (ranges are genuinely different): "Rebecca is over 65 years old but not over 85 years old while her husband Chris is over 70 years old but not over 85 years old."
+  Only use "while" when the two ranges are actually different from each other.
+- Same coverage: "They have a Medicare supplement under Humana."
+  This applies even when each person's coverage was confirmed separately in the call.
+  Never repeat coverage per person. Never write "as does his wife", "her husband also has", or any per-person coverage sentence when both share the same carrier and plan type.
+- Different carriers: "They have Medicare supplement plan.  Heart has her supplement under United Healthcare while Michael is with Cigna."
+- Different plan types: "Heart has her Medicare supplement under Mutual of Omaha while Michael has a Medicare Advantage plan under Wellcare."
+- Spouse working: "Her husband is still working."
+- Info given by spouse: "She has a Medicare Advantage plan as per her husband Michael."
+- Spouse age only (no YOB): "Her husband is 87 years old."
+
+ALTERNATE CONTACT INFO
+- If the prospect provides an alternate phone number, add: "Provided an alternate phone number as 123456789."
+- If the prospect provides a new address (moved, or the address on file is outdated), add: "Provided a new address as 123 Gold St., Kannapolis, NC 28081."
+- If BOTH are provided, include both sentences — phone number first, then address.
+- These sentences go after the coverage/marital status sentences and before any "Agreed to receive..." sentence.
+- A "new address" means the prospect VOLUNTEERS a different address than what the caller has on file.
+- An "alternate phone number" means the prospect OFFERS a different number not previously known.
+- CRITICAL: When the caller READS BACK an address or phone number and the prospect simply confirms ("Yes", "We are", "Correct", "It is"), that is VERIFICATION — write NOTHING. Do NOT write "Provided a new address" or "Provided an alternate phone number" in this case.
+  WRONG: Caller says "Are you still at 347 Hawksmore Court?" → Prospect says "We are." → DO NOT write "Provided a new address as 347 Hawksmore Court."
+  WRONG: Caller says "The number I dialed is 704-905-2770, correct?" → Prospect says "It is." → DO NOT write "Provided an alternate phone number as 704-905-2770."
+  CORRECT: Only write these sentences when the prospect says something like "Actually, my new address is..." or "You can also reach me at..." — information the caller did NOT already have.
+
+CANONICAL PHRASES — copy exactly (adjust pronouns only)
+- Unsure of carrier: "but not sure from what company they have it with"
+- Refused carrier: "but refused to disclose from what company they have it with"
+- Unsure of spouse's coverage: "He is not sure of his wife's coverage." / "She is not sure of her husband's coverage."
+- Refused spouse info: "Refused to disclose spouse information."
+- Follow-up agreed: "Agreed to receive a call from our Medicare specialist." or "Agreed to receive a call from our Life specialist."
+Never reword these. Never write "He agreed to receive..." — the sentence starts with "Agreed".
+
+REFUSALS
+- Never convert a refusal into a fact.
+- Refusals to participate, requests not to be called, and contact preferences are NEVER written in the notes. They only affect whether the "Agreed to receive..." sentence appears.
+
+FOLLOW-UP / AGREEMENT RULE (strict — check the ENTIRE call before deciding)
+- Add the "Agreed to receive a call..." sentence ONLY if the prospect gave an explicit, affirmative response directly to the follow-up offer (e.g. "yes", "okay, that's fine", "sure").
+- The caller announcing that a specialist will call is NOT agreement.
+- "Thank you", "uh-huh", "mhm", politeness, silence, or not objecting after the closing spiel is NOT agreement.
+- OVERRIDE RULE: if at ANY point in the call — including after the closing — the prospect says they do not want calls, asks for mail or email instead, or refuses follow-up in any form, you must NOT add the agreed sentence, even if earlier parts of the call sounded cooperative. The latest statement wins.
+- When agreement was not explicit or was refused: simply end the notes after the last factual sentence. Add nothing in its place.
+
+BANNED SENTENCES — never write anything resembling these
+- "Provided no alternate contact information."
+- "No alternate contact information was given."
+- "He does not want any more calls."
+- "Would rather be contacted by mail or email."
+- "Requested to be contacted by mail."
+- "Refused to provide further information."
+- "Please do not contact him again."
+- "Declined participation."
+- Any sentence about what was NOT provided, NOT discussed, or NOT confirmed (except the canonical refusal-of-carrier and refusal-of-spouse-info phrases).
+- Any sentence describing the conversation itself.
+
+CAMPAIGN-SPECIFIC
+- MedSupp: focus on Medicare coverage per the coverage wording rules. Include spouse coverage only if discussed.
+- T65: include working status, smoking status, and coverage if discussed.
+- Life: include carrier, benefit amount, and policy type if known.
+
+OFFICIAL EXAMPLES — match this style exactly
+
+MEDICARE ONLY:
+Marge is 72 years old and was born 1952.  She is on Medicare but no supplement.  Not married.  Agreed to receive a call from our Medicare specialist.
+
+MEDICARE ONLY, couple:
+Marge is 72 years old and was born 1952 while her husband John is 76 years old and was born 1949.  They are on Medicare but no supplement.  Agreed to receive a call from our Medicare specialist.
+
+MEDICARE ONLY, couple with Tricare:
+Marge is 72 years old and was born 1952 while her husband John is 76 years old and was born 1949.  They are on Medicare but no supplement.  They are also covered by their Tricare benefits.  Agreed to receive a call from our Medicare specialist.
+
+MEDICARE ONLY, couple with different benefits:
+Marge is 72 years old and was born 1952 while her husband John is 76 years old and was born 1949.  They are on Medicare but no supplement.  Marge is also covered by her VA benefits while John is also covered by his Tricare benefits.  Agreed to receive a call from our Medicare specialist.
+
+MEDSUPP, widowed:
+Heart is 69 years old and was born 1956.  She has a Medicare supplement plan under Humana.  Widowed.  Agreed to receive a call from our Medicare specialist.
+
+MEDSUPP, couple same coverage:
+Heart is 69 years old and was born 1956 while her husband Michael is 72 years old and was born 1952.  They have a Medicare supplement under Humana.  Agreed to receive a call from our Medicare specialist.
+
+ADVANTAGE, couple, HMO specified:
+Heart is 69 years old and was born 1956 while her husband Michael is 72 years old and was born 1952.  They have a Medicare Advantage plan under Humana (HMO).  Agreed to receive a call from our Medicare specialist.
+
+MEDSUPP, couple different carriers:
+Heart is 69 years old and was born 1956 while her husband Michael is 72 years old and was born 1952.  They have Medicare supplement plan.  Heart has her supplement under United Healthcare while Michael is with Cigna.  Agreed to receive a call from our Medicare specialist.
+
+MEDSUPP, couple unsure of carrier:
+Heart is 69 years old and was born 1956 while her husband Michael is 72 years old and was born 1952.  They have a Medicare supplement but not sure from what company they have it with.  Agreed to receive a call from our Medicare specialist.
+
+ADVANTAGE, couple refused carrier, same age, no agreement:
+Heart and her husband Michael are both 69 years old and were born 1956.  They have a Medicare Advantage plan but refused to disclose from what company they have it with.
+
+MEDSUPP, couple same age range (no exact YOB), same carrier, prospect declined follow-up.
+Caller verified address and phone on file — prospect confirmed both. No new contact info:
+Rebecca and her husband Chris, are both over 70 years old but not over 85 years old.  They have a Medicare supplement under Blue Cross Blue Shield.
+
+ADVANTAGE, spouse still working:
+Heart is 69 years old and was born 1956.  She has a Medicare Advantage plan but refused to disclose from what company she has it with.  Her husband is still working.  Agreed to receive a call from our Medicare specialist.
+
+ADVANTAGE, info as per spouse:
+Heart is 69 years old and was born 1956.  She has a Medicare Advantage plan as per her husband Michael but refused to disclose from what company she has it with.  Her husband is still working.  Agreed to receive a call from our Medicare specialist.
+
+Couple, different plan types:
+Heart is 69 years old and was born 1956.  Heart has her Medicare supplement under Mutual of Omaha while Michael has a Medicare Advantage plan under Wellcare.  Agreed to receive a call from our Medicare specialist.
+
+MEDICARE + VA ONLY:
+Yvonne is 72 years old and was born 1952.  She is on Medicare but no supplement.  She is also covered by her VA benefits.  Not married.  Agreed to receive a call from our Medicare specialist.
+
+MEDICARE + TRICARE ONLY:
+Yvonne is 72 years old and was born 1952.  She is on Medicare but no supplement.  She is also covered by her Tricare benefits.  Not married.  Agreed to receive a call from our Medicare specialist.
+
+HAS MEDICAID:
+Sunshine is 80 years old and was born 1944.  She is on Medicaid and has a Medicare supplement under Humana.  Widowed.  Agreed to receive a call from our Medicare specialist.
+
+MEDICAID, spouse age only:
+Sunshine is 80 years old and was born 1944.  She is on Medicaid and has a Medicare supplement under Humana.  Her husband is 87 years old.  Agreed to receive a call from our Medicare specialist.
+
+ALTERNATE PHONE PROVIDED:
+Yhana is 69 years old and was born 1956.  She has a Medicare supplement under Humana.  Widowed.  Provided an alternate phone number as 123456789.  Agreed to receive a call from our Medicare specialist.
+
+NEW ADDRESS PROVIDED:
+Yhana is 69 years old and was born 1956.  She has a Medicare supplement under Humana.  Widowed.  Provided a new address as 123 Gold St., Kannapolis, NC 28081.  Agreed to receive a call from our Medicare specialist.
+
+ALTERNATE PHONE AND NEW ADDRESS PROVIDED:
+Yhana is 69 years old and was born 1956.  She has a Medicare supplement under Humana.  Widowed.  Provided an alternate phone number as 123456789.  Provided a new address as 123 Gold St., Kannapolis, NC 28081.  Agreed to receive a call from our Medicare specialist.
+
+SECONDARY INSURANCE (prospect confirmed secondary coverage but plan type was NEVER established in the call):
+Walter is 74 years old and was born 1951.  He has secondary insurance under Cigna.  Not married.  Agreed to receive a call from our Medicare specialist.
+
+MEDSUPP confirmed via assumptive question (prospect answered yes to "you have a Medicare supplement, is that correct?"), spouse coverage unknown, no explicit agreement:
+Robert is 71 years old and was born 1954.  He has a Medicare supplement under AARP through United Healthcare.  He is not sure of his wife's coverage.
+
+COUPLE, same coverage, declined further calls — notes end after the last fact, the refusal is NOT mentioned, no contact-info sentence:
+Ernest is 78 years old and was born 1948 while his wife Annie is 79 years old and was born 1947.  They have a Medicare supplement under United Healthcare.
+
+FINAL CHECK before you answer: re-read your notes and DELETE any sentence that mentions missing information, refusals, contact preferences, or the conversation itself. The notes must contain only facts about the prospect. Then return the single paragraph.
+
+ADDITIONALLY, after generating the notes, extract call information as structured data.
+
+Return your entire response as a single JSON object:
+{
+  "notes": "<the paragraph notes you generated above>",
+  "call_info": {
+    "first_name": null,
+    "last_name": null,
+    "address": null,
+    "phone": null,
+    "age": null,
+    "yob": null,
+    "carrier": null,
+    "has_spouse": null,
+    "spouse_first_name": null,
+    "spouse_last_name": null,
+    "spouse_age": null,
+    "spouse_yob": null,
+    "spouse_carrier": null,
+    "agreed_to_followup": null,
+    "agreement_quote": null
+  }
+}
+
+call_info rules:
+- age/spouse_age: exact number string OR range as stated (e.g. "over 70 but not over 85"). null if not mentioned.
+- yob/spouse_yob: year of birth number only if explicitly stated. null if only a range was confirmed.
+- agreed_to_followup: true=explicit yes to callback, false=explicit refusal, null=never offered or unclear.
+- agreement_quote: exact words to agree/decline, max 15 words.
+- Extract ONLY facts explicitly stated. Never infer or guess.`
+          },
+          {
+            role: 'user',
+            content:
+              'Survey Type: ' +
+              surveyType +
+              '\n\nTranscript:\n' +
+              transcript
+          }
+        ]
+      })
+    }
+  );
+
+  if (!res.ok) {
+    let errMsg = 'Notes generation failed';
+    try { const e = await res.json(); errMsg = e.error?.message || errMsg; } catch(_) {}
+    throw new Error(errMsg);
+  }
+
+  const data = await res.json();
+  try {
+    const parsed = JSON.parse(data.choices[0].message.content);
+    return {
+      notes: sanitizeNotes((parsed.notes || '').trim()),
+      call_info: parsed.call_info || null
+    };
+  } catch(e) {
+    // Fallback: model returned plain text instead of JSON — treat as notes only
+    return { notes: sanitizeNotes(data.choices[0].message.content.trim()), call_info: null };
+  }
+}
+async function runAnalysis() {
+  if (!ST.file) { alert('Please upload a recording first.'); return; }
+  const btn = document.getElementById('analyzeBtn');
+  const lbl = document.getElementById('analyzeLbl');
+  btn.disabled = true;
+  lbl.innerHTML = '<span class="spinner"></span> Transcribing...';
+
+  try {
+    // Transcribe
+    const fd = new FormData();
+    fd.append('file', ST.file);
+    fd.append('model','whisper-large-v3');
+    fd.append('response_format','verbose_json');
+    const tr = await fetch('https://api.groq.com/openai/v1/audio/transcriptions',{
+      method:'POST', headers:{'Authorization':'Bearer '+getNextKey()}, body:fd
+    });
+    if (!tr.ok) { const e=await tr.json(); throw new Error(e.error?.message||'Transcription failed'); }
+    ST.transcript = (await tr.json()).text || '';
+
+// Separate Agent and Prospect before showing/analyzing
+lbl.innerHTML = '<span class="spinner"></span> Separating speakers...';
+ST.transcript = await separateSpeakers(ST.transcript);
+
+showTranscript();
+
+const camp = ST.activeCamp;
+
+lbl.innerHTML = '<span class="spinner"></span> Generating notes & extracting call info...';
+
+const _combined = await generateNotesAndCallInfo(ST.transcript, camp?.surveyType || '');
+  const notes = _combined.notes || '';
+  const callInfo = _combined.call_info || null;
+  ST.callInfo = callInfo;
+
+document.getElementById('aiNotes').value = notes;
+document.getElementById('notesCard').style.display = '';
+    
+    // Analyze
+    lbl.innerHTML = '<span class="spinner"></span> Analyzing...';
+    const allDnqs = [...BASE_DNQS,...(camp?.extraDnqs||[])];
+    const reqFields = camp?.requiredFields||BASE_REQ;
+    const geoFocus = camp?.geoFocus||'';
+    const tx = ST.transcript.toLowerCase();
+    let scriptBlock = '';
+    if (camp?.scripts) {
+      const s = camp.scripts;
+      if ((tx.includes('medicare supplement')||tx.includes('secondary')||tx.includes('supplement'))&&s.medsup) scriptBlock += '\nMEDSUPP SCRIPT:\n'+s.medsup;
+      if ((tx.includes('life insurance')||tx.includes('life specialist'))&&s.life) scriptBlock += '\nLIFE SCRIPT:\n'+s.life;
+      if ((tx.includes('turning 65')||tx.includes('price comparison'))&&s.t65) scriptBlock += '\nT65 SCRIPT:\n'+s.t65;
+      if (!scriptBlock&&s.medsup) scriptBlock = '\nCAMPAIGN SCRIPT:\n'+s.medsup;
+    }
+    const guidelinesBlock = camp?.guidelines ? '\n\nCAMPAIGN GUIDELINES:\n'+camp.guidelines : '';
+    const carrierList = camp?.carriers?.length ? camp.carriers : ['AARP','UnitedHealthcare','Aetna','BCBS','Cigna','Humana','Mutual of Omaha','Transamerica','Bankers Life','Colonial Penn','Globe Life','Physicians Mutual','Prudential','MetLife','State Farm'];
+    const campName = camp?.name||document.getElementById('campSelect').options[document.getElementById('campSelect').selectedIndex]?.text||'Not specified';
+
+    const ar = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+getNextKey()},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile', max_tokens:1200, temperature:0.2,
+        response_format:{type:'json_object'},
+        messages:[{
+          role:'system',
+          content:`You are a strict, experienced QA analyst for an outbound Medicare Supplement telemarketing BPO in the Philippines. You score honestly. 5=excellent/near-perfect, 4=good/minor issues, 3=average/noticeable problems, 2=needs improvement, 1=poor/major failure. Never inflate scores.
+
+ACTIVE LISTENING IS CRITICAL. Heavily penalize:
+- Asking a question already answered by prospect
+- Ignoring emotional cues (e.g. continuing to ask about deceased spouse)
+- Repeating questions after getting clear answers
+- No awareness of what prospect just said
+Active listening failures CAP tone/probing/objections/callflow at MAX 3.
+
+DELIVERY MATTERS: Score based on HOW the caller delivered — not just what was said. Penalize dead air, stuttering, filler words, robotic reading, flat energy, mispronunciation.
+
+Return ONLY valid JSON.`
+        },{
+          role:'user',
+          content:`Analyze this transcript as a senior QA analyst. Return ONLY JSON.
+
+TRANSCRIPT:
+${ST.transcript}
+IMPORTANT:
+
+If the transcript contains:
+
+CALL_TYPE: ANSWERING_MACHINE
+
+Return:
+
+{
+  "scores":{
+    "opening":0,
+    "tone":0,
+    "probing":0,
+    "script":0,
+    "objections":0,
+    "closing":0,
+    "compliance":0,
+    "callflow":0
+  },
+  "dnq_flags":[],
+  "callback_flags":["Answering Machine"],
+  "geo_flags":[],
+  "feedback":"Voicemail reached. No live conversation occurred.",
+  "action_plan":"N/A"
+}
+
+Do not perform QA scoring.
+
+CAMPAIGN: ${campName}
+${geoFocus?'GEO: Only covers: '+geoFocus+'. Flag if clearly outside. Give benefit of doubt for unfamiliar city names.':''}
+${guidelinesBlock}
+${scriptBlock}
+
+CARRIERS: ${carrierList.join(', ')}
+
+SCORING:
+- opening: intro, name, company, purpose, prospect confirmation
+- tone: delivery confidence energy clarity pronunciation grammar. Penalize dead air stuttering filler words robotic reading.
+- probing: qualification questions AND active listening. Penalize repeated answered questions missing volunteered info.
+- script: hitting required checkpoints in correct order natural delivery
+- objections: handling pushback emotional moments. Penalize ignoring emotional cues.
+- closing: next steps no-obligation thank you correct closing spiel used
+- compliance: qualification confirmed no false promises DNC
+- callflow: structure control natural conversation. Penalize disjointed confused not tracking conversation.
+
+CARRIER VALIDATION: Flag only clear non-insurers, Medicare Advantage products (HMO/PPO), or government programs. Medicare only = EXCELLENT lead never flag. Two companies without clarification = CALLBACK.
+
+UNSELLABLE LEAD FLAG AS DNQ: above 85, Medicare Advantage incompatible, Medicaid primary, still working with employer insurance, VA+Medicaid disabled veteran, union/government full coverage, moved out of coverage area, firm refusal of follow-up.
+
+DNQ CONDITIONS:
+${allDnqs.map(d=>'- '+d).join('\n')}
+${geoFocus?'- Outside geographic coverage: '+geoFocus:''}
+
+CALLBACK CONDITIONS:
+${reqFields.map(r=>'- '+r+' not confirmed').join('\n')}
+- Two companies mentioned but caller did not clarify which is active plan
+- Age and YOB mismatch not clarified by caller
+
+HARD RULES:
+- Active listening failures: cap tone/probing/objections/callflow at 3
+- Two companies not clarified: MUST flag as callback, set all scores to 0
+- Age/YOB mismatch not resolved: flag as callback
+- Callback call: set ALL scores to 0, feedback explains what was missing
+
+DO NOT invent names or details not in transcript. Reference specific transcript moments. Be direct and coaching-focused.
+
+Return ONLY:
+{"scores":{"opening":0,"tone":0,"probing":0,"script":0,"objections":0,"closing":0,"compliance":0,"callflow":0},"dnq_flags":[],"callback_flags":[],"geo_flags":[],"feedback":"3-4 sentences referencing specific transcript moments","action_plan":"3 specific coaching actions"}`
+        }]
+      })
+    });
+    if (!ar.ok) { const e=await ar.json(); throw new Error(e.error?.message||'Analysis failed'); }
+    const aData = await ar.json();
+    const analysis = JSON.parse(aData.choices[0].message.content.replace(/```json|```/g,'').trim());
+
+    applyAI(analysis.scores);
+    ST.dnqFlags = analysis.dnq_flags||[];
+    ST.cbFlags = analysis.callback_flags||[];
+    ST.geoFlags = analysis.geo_flags||[];
+    document.getElementById('feedback').value = analysis.feedback||'';
+    document.getElementById('actionPlan').value = analysis.action_plan||'';
+    renderFlags();
+
+    if (ST.cbFlags.length>0) setDisp('Callback');
+    else if (ST.dnqFlags.length>0||ST.geoFlags.length>0) setDisp('Invalid');
+    else { const t=total(); setDisp(t>=30?'Pass':'Fail'); }
+
+    renderCallInfo(callInfo);
+    if (callInfo) document.getElementById('callInfoCard').style.display='';
+    document.getElementById('txCard').style.display='';
+    document.getElementById('scoreCard').style.display='';
+    document.getElementById('fbCard').style.display='';
+    lbl.textContent='✓ Done — re-run';
+    btn.disabled=false;
+
+  } catch(err) {
+    btn.disabled=false; lbl.textContent='Transcribe & Analyze';
+    alert('Error: '+err.message);
+  }
+}
+
+function showTranscript() {
+  const callerName = document.getElementById('callerName').value || 'Caller';
+  const campName = document.getElementById('campSelect').options[document.getElementById('campSelect').selectedIndex]?.text || '';
+
+  document.getElementById('txMeta').innerHTML =
+    (callerName ? `<span class="chip">👤 ${callerName}</span>` : '') +
+    (campName && campName !== '— Select campaign —' ? `<span class="chip">📢 ${campName}</span>` : '') +
+    `<span class="chip">🕐 ${new Date().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}</span>`;
+
+const lines = ST.transcript.split(/\n+/).filter(Boolean);
+
+const filteredLines = lines.filter(line =>
+  !line.startsWith('CALL_TYPE:') &&
+  !line.startsWith('RELIABILITY:')
+);
+
+document.getElementById('txBox').innerHTML = filteredLines.map(line => {
+    const isCaller = line.trim().toUpperCase().startsWith('CALLER:');
+    const isProspect = line.trim().toUpperCase().startsWith('PROSPECT:');
+
+    let text = line
+      .replace(/^CALLER:\s*/i, '')
+      .replace(/^PROSPECT:\s*/i, '');
+
+    return `<div style="margin-bottom:7px">
+      <span class="${isCaller ? 'spk-c' : 'spk-p'}">${isCaller ? 'CALLER' : 'PROSPECT'}</span> ${text}
+    </div>`;
+  }).join('');
+}
+function renderFlags() {
+  let html='';
+  ST.dnqFlags.forEach(f=>html+=`<div class="flag flag-dnq"><span style="flex-shrink:0">⚠️</span><div><strong>Possible DNQ:</strong> ${f} — verify before disqualifying.</div></div>`);
+  ST.cbFlags.forEach(f=>html+=`<div class="flag flag-cb"><span style="flex-shrink:0">↩</span><div><strong>Possible Callback:</strong> ${f}</div></div>`);
+  ST.geoFlags.forEach(f=>html+=`<div class="flag flag-geo"><span style="flex-shrink:0">📍</span><div><strong>Geo flag:</strong> ${f} — verify location.</div></div>`);
+  document.getElementById('flagsArea').innerHTML=html;
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function buildRow() {
+  const caller = document.getElementById('callerName').value||'';
+  const camp = document.getElementById('campSelect').options[document.getElementById('campSelect').selectedIndex]?.text||'';
+  const scores = CRITERIA.map(c=>ST.scores[c.id]||'');
+  const t = total();
+  const g = gradeInfo(t).label.replace(' — Pass','').replace(' — Fail','');
+  const pf = ST.disp==='Callback'||ST.disp==='Invalid' ? ST.disp : t>=30?'Pass':'Fail';
+  const fb = document.getElementById('feedback').value.replace(/\n/g,' ');
+  const ap = document.getElementById('actionPlan').value.replace(/\n/g,' ');
+  const analyst = document.getElementById('analystName').value||'';
+  const date = document.getElementById('evalDate').value;
+  const phone = document.getElementById('phoneNum').value||'';
+  const cbInv = ST.disp==='Callback'||ST.disp==='Invalid'?ST.disp:'';
+  const ov = document.getElementById('overrideGrade').value||'';
+  const ovR = document.getElementById('overrideReason').value.replace(/\n/g,' ')||'';
+  const finalG = ov||g;
+  const finalPF = ov?(ov.includes('A')||ov.includes('B')?'Pass':ov==='Callback'||ov==='Invalid'?ov:'Fail'):pf;
+return [caller,camp,...scores,cbInv,t,g,finalG,finalPF,analyst,fb,ap,date,phone,ov?'Override:'+ov:'',ovR].join('\t');
+}
+
+function copyRow() {
+  navigator.clipboard.writeText(buildRow()).then(()=>{
+    const b=document.getElementById('copyBtn');
+    b.className='btn-outline copied'; b.textContent='✓ Copied!';
+    setTimeout(()=>{ b.className='btn-outline'; b.innerHTML='📋 Copy row to clipboard'; },2500);
+  });
+}
+
+function submitViaForm(url, jsonData) {
+  return new Promise((resolve, reject) => {
+    // Build URL with data as query parameter
+    const params = new URLSearchParams({ data: jsonData });
+    const fullUrl = url + '?' + params.toString();
+
+    // Open in a hidden iframe - most reliable for Apps Script from local files
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'display:none;width:1px;height:1px;';
+    iframe.src = fullUrl;
+    document.body.appendChild(iframe);
+
+    // Wait 4 seconds then resolve (Apps Script is slow on first call)
+    setTimeout(() => {
+      try { document.body.removeChild(iframe); } catch(e) {}
+      resolve();
+    }, 4000);
+  });
+}
+
+async function submitToSheet() {
+  const caller = document.getElementById('callerName').value.trim();
+  const analyst = document.getElementById('analystName').value.trim();
+  if (!caller) { alert('Please enter caller name.'); return; }
+  if (!analyst) { alert('Please enter analyst name.'); return; }
+  if (!ST.transcript) { alert('Please analyze a call first.'); return; }
+
+  // Check if Apps Script URL is configured
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    alert('Submit is not configured yet.\n\nPlease ask your OM to set up the Google Apps Script connector.\n\nYou can use "Copy row to clipboard" and paste manually into the QA Tracker for now.');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  const msg = document.getElementById('statusMsg');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+  msg.style.color = 'var(--text-light)';
+  msg.textContent = 'Submitting to QA Tracker...';
+
+  try {
+    const scores = CRITERIA.map(c => ST.scores[c.id] || 0);
+    const t = total();
+    const g = gradeInfo(t).label.replace(' — Pass','').replace(' — Fail','');
+    const ov = document.getElementById('overrideGrade').value || '';
+    const ovR = document.getElementById('overrideReason').value.replace(/\n/g,' ') || '';
+    const aiSuggestedGrade = g;
+const finalG = ov || g;
+    const finalPF = ov
+      ? (ov.includes('A') || ov.includes('B') ? 'Pass' : ov === 'Callback' || ov === 'Invalid' ? ov : 'Fail')
+      : (ST.disp === 'Callback' || ST.disp === 'Invalid' ? ST.disp : t >= 30 ? 'Pass' : 'Fail');
+    const camp = document.getElementById('campSelect').options[document.getElementById('campSelect').selectedIndex]?.text || '';
+    const cbInv = ST.disp === 'Callback' || ST.disp === 'Invalid' ? ST.disp : '';
+
+    const payload = {
+      row: [
+        caller, camp,
+scores[0], scores[1], scores[2], scores[3], scores[4], scores[5], scores[6], scores[7],
+cbInv, t, aiSuggestedGrade, finalG, finalPF,
+analyst,
+        document.getElementById('feedback').value.replace(/\n/g,' '),
+        document.getElementById('actionPlan').value.replace(/\n/g,' '),
+        document.getElementById('evalDate').value,
+        document.getElementById('phoneNum').value || '',
+        ov || '',
+        ovR
+      ]
+    };
+
+    // Submit via hidden form — most reliable way to POST to Apps Script from local files
+    await submitViaForm(APPS_SCRIPT_URL, JSON.stringify(payload));
+
+    msg.style.color = 'var(--green)';
+    msg.textContent = '✓ Submitted successfully!';
+    btn.innerHTML = '✓ Submitted';
+    btn.style.background = 'var(--green)';
+    validateAndWriteLeadsheet(finalG.replace(/\s*\(Pass\)|\s*\(Fail\)/gi,'').toUpperCase()+'.');
+    setTimeout(resetForm, 2000);
+
+  } catch(err) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = '✗ ' + err.message;
+    btn.disabled = false;
+    btn.innerHTML = '📤 Submit to QA Tracker';
+    btn.style.background = '';
+  }
+}
+
+function resetForm() {
+  ST={file:null,transcript:'',scores:{},aiScores:{},disp:'',dnqFlags:[],cbFlags:[],geoFlags:[],activeCamp:ST.activeCamp};
+  document.getElementById('callerName').value='';
+  document.getElementById('phoneNum').value='';
+  document.getElementById('dropLabel').textContent='Drop recording here or click to browse';
+  document.getElementById('dropZone').classList.remove('has-file');
+  document.getElementById('audioInput').value='';
+  document.getElementById('analyzeBtn').disabled=true;
+  document.getElementById('analyzeLbl').textContent='Transcribe & Analyze';
+  document.getElementById('txCard').style.display='none';
+  document.getElementById('scoreCard').style.display='none';
+  document.getElementById('fbCard').style.display='none';
+  document.getElementById('feedback').value='';
+  document.getElementById('actionPlan').value='';
+  document.getElementById('statusMsg').textContent='';
+  document.getElementById('submitBtn').disabled=false;
+  document.getElementById('submitBtn').innerHTML='📤 Submit to QA Tracker';
+  document.getElementById('submitBtn').style.background='';
+  document.getElementById('copyBtn').className='btn-outline';
+  document.getElementById('copyBtn').innerHTML='📋 Copy row to clipboard';
+  if (document.getElementById('overridePanel').classList.contains('open')) toggleOverride();
+  document.querySelectorAll('.disp-btn').forEach(b=>b.className='disp-btn');
+  renderCriteria();
+  document.getElementById('scoreSummary').innerHTML='<div class="empty"><div style="font-size:28px;margin-bottom:8px">📋</div>Score appears after analysis</div>';
+  document.getElementById('evalDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('aiNotes').value = '';
+document.getElementById('notesCard').style.display = 'none';
+  document.getElementById('callInfoContent').innerHTML = '';
+  document.getElementById('callInfoCard').style.display = 'none';
+}
+
+// ─── OM PANEL ─────────────────────────────────────────────────────────────────
+function openOM() {
+  loadKeyInput();
+  document.getElementById('overlay').classList.add('open');
+  if (!omOpen) {
+    document.getElementById('pwBox').style.display='';
+    document.getElementById('omPanel').style.display='none';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwErr').textContent='';
+  } else {
+    renderOM();
+  }
+}
+
+function closeOM() { document.getElementById('overlay').classList.remove('open'); }
+
+function checkPW() {
+  if (document.getElementById('pwInput').value===OM_PASS) {
+    omOpen=true;
+    document.getElementById('pwBox').style.display='none';
+    document.getElementById('omPanel').style.display='';
+    renderOM();
+  } else {
+    document.getElementById('pwErr').textContent='Incorrect password.';
+    document.getElementById('pwInput').value='';
+  }
+}
+
+function lockOM() { omOpen=false; closeOM(); }
+
+function updateKey() {
+  const raw = document.getElementById('keyInput').value;
+  const keys = raw.split(/\n/).map(k => k.trim()).filter(k => k.startsWith('gsk_'));
+  if (!keys.length) { alert('No valid keys found. Each key should start with gsk_'); return; }
+
+  localStorage.setItem('tmd_groq_keys', JSON.stringify(keys));
+  localStorage.setItem('tmd_groq_key_idx', '0');  // reset rotation
+
+  const m = document.getElementById('keySavedMsg');
+  const c = document.getElementById('keyCountMsg');
+  m.style.display = 'inline';
+  if (c) c.textContent = keys.length + ' key' + (keys.length > 1 ? 's' : '') + ' active';
+  setTimeout(() => m.style.display = 'none', 2000);
+}
+
+function loadKeyInput() {
+  try {
+    const keys = JSON.parse(localStorage.getItem('tmd_groq_keys') || '[]');
+    if (keys.length) {
+      document.getElementById('keyInput').value = keys.join('\n');
+      const c = document.getElementById('keyCountMsg');
+      if (c) c.textContent = keys.length + ' key' + (keys.length > 1 ? 's' : '') + ' active';
+    }
+  } catch(_) {}
+}
+
+function updateScriptUrl() {
+  const u = document.getElementById('scriptUrlInput').value.trim();
+  if (!u) { alert('Please enter the Apps Script URL.'); return; }
+  APPS_SCRIPT_URL = u;
+  try { localStorage.setItem('tmd_script_url', u); } catch(e) {}
+  const m = document.getElementById('urlSavedMsg');
+  m.style.display='inline';
+  setTimeout(()=>m.style.display='none',2000);
+}
+
+function renderOM() {
+  document.getElementById('keyInput').value=groqKey;
+  try {
+    const savedUrl = localStorage.getItem('tmd_script_url');
+    if (savedUrl) { APPS_SCRIPT_URL = savedUrl; document.getElementById('scriptUrlInput').value = savedUrl; }
+    else document.getElementById('scriptUrlInput').value = APPS_SCRIPT_URL || '';
+
+  } catch(e) {}
+  const list=getCamps(); const el=document.getElementById('campList'); el.innerHTML='';
+  list.forEach((c,i)=>{
+    const div=document.createElement('div'); div.className='camp-item';
+    div.innerHTML=`
+      <div class="camp-head" onclick="toggleCamp(${i})">
+        <span style="font-size:13px;font-weight:700">📋 ${c.name} <span style="font-size:10px;color:var(--text-light);font-weight:400">${c.surveyType||''}</span></span>
+        <span id="chev${i}" style="color:var(--text-light)">▼</span>
+      </div>
+      <div class="camp-body" id="cb${i}">
+        <div class="om-label">Campaign name</div><input class="om-input" id="cn${i}" value="${c.name}">
+        <div class="om-label">Survey type</div><input class="om-input" id="ct${i}" value="${c.surveyType||''}" placeholder="MedSupp, Life, T65">
+        <div class="om-label">Geographic focus</div><input class="om-input" id="cg${i}" value="${c.geoFocus||''}" placeholder="e.g. NC counties: Mecklenburg, Gaston...">
+        <div class="om-label">Extra DNQs (Enter to add)</div>
+        <div class="tag-wrap" onclick="document.getElementById('di${i}').focus()">
+          ${(c.extraDnqs||[]).map(d=>`<span class="tag">${d}<span class="tag-x" onclick="rmDnq(event,${i},'${d.replace(/'/g,"\\'")}')">×</span></span>`).join('')}
+          <input class="tag-input" id="di${i}" placeholder="Add and press Enter..." onkeydown="addDnq(event,${i})">
+        </div>
+        <div class="om-label">Required fields</div>
+        <div class="req-grid">${BASE_REQ.map(r=>{const on=(c.requiredFields||BASE_REQ).includes(r);return`<label class="req-toggle ${on?'on':''}" onclick="togReq(${i},'${r.replace(/'/g,"\\'")}')"><input type="checkbox" ${on?'checked':''}> ${r}</label>`;}).join('')}</div>
+        <div class="om-label">Scripts</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <button class="script-tab active" id="st${i}medsup" onclick="switchTab(${i},'medsup')">MedSupp</button>
+          <button class="script-tab" id="st${i}life" onclick="switchTab(${i},'life')">Life</button>
+          <button class="script-tab" id="st${i}t65" onclick="switchTab(${i},'t65')">T65</button>
+        </div>
+        <textarea class="om-textarea" id="cs${i}medsup" rows="5">${(c.scripts?.medsup)||''}</textarea>
+        <textarea class="om-textarea" id="cs${i}life" rows="5" style="display:none">${(c.scripts?.life)||''}</textarea>
+        <textarea class="om-textarea" id="cs${i}t65" rows="5" style="display:none">${(c.scripts?.t65)||''}</textarea>
+        <div class="om-label">Guidelines / qualification rules</div>
+        <textarea class="om-textarea" id="cgl${i}" rows="4">${c.guidelines||''}</textarea>
+        <div class="om-label">Valid carriers (comma separated)</div>
+        <textarea class="om-textarea" id="cca${i}" rows="2">${(c.carriers||[]).join(', ')}</textarea>
+        <div class="om-label">Campaign notes for AI</div>
+        <textarea class="om-textarea" id="co${i}" rows="2">${c.notes||''}</textarea>
+        <div class="om-label" style="margin-top:8px">Leadsheet Apps Script URL <span style="font-size:10px;font-weight:400;text-transform:none;color:var(--text-light)">(QA notes auto-written to this campaign's leadsheet)</span></div>
+        <input class="om-input" id="cls${i}" value="${c.leadsheetUrl||''}" placeholder="https://script.google.com/macros/s/...">
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <button class="danger-btn" onclick="delCamp(${i})">🗑 Delete</button>
+          <button class="save-btn" onclick="saveCamp(${i})">Save</button>
+        </div>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+function toggleCamp(i) {
+  const b=document.getElementById('cb'+i); const c=document.getElementById('chev'+i);
+  const open=b.classList.contains('open');
+  document.querySelectorAll('.camp-body').forEach(x=>x.classList.remove('open'));
+  document.querySelectorAll('[id^="chev"]').forEach(x=>x.textContent='▼');
+  if(!open){b.classList.add('open');c.textContent='▲';}
+}
+
+function switchTab(i,type) {
+  ['medsup','life','t65'].forEach(t=>{
+    const ta=document.getElementById('cs'+i+t); const btn=document.getElementById('st'+i+t);
+    if(ta) ta.style.display=t===type?'':'none';
+    if(btn) btn.className='script-tab'+(t===type?' active':'');
+  });
+}
+
+function addDnq(e,i) {
+  if(e.key!=='Enter') return; e.preventDefault();
+  const inp=document.getElementById('di'+i); const v=inp.value.trim(); if(!v) return;
+  const list=getCamps(); if(!list[i].extraDnqs) list[i].extraDnqs=[];
+  if(!list[i].extraDnqs.includes(v)){list[i].extraDnqs.push(v);saveCamps(list);renderOM();setTimeout(()=>{toggleCamp(i);},10);}
+  inp.value='';
+}
+
+function rmDnq(e,i,v) {
+  e.stopPropagation();
+  const list=getCamps(); list[i].extraDnqs=(list[i].extraDnqs||[]).filter(d=>d!==v);
+  saveCamps(list); renderOM(); setTimeout(()=>toggleCamp(i),10);
+}
+
+function togReq(i,r) {
+  const list=getCamps(); if(!list[i].requiredFields) list[i].requiredFields=[...BASE_REQ];
+  const idx=list[i].requiredFields.indexOf(r);
+  if(idx>=0) list[i].requiredFields.splice(idx,1); else list[i].requiredFields.push(r);
+  saveCamps(list); renderOM(); setTimeout(()=>toggleCamp(i),10);
+}
+
+function saveCamp(i) {
+  const list=getCamps();
+  list[i].name=document.getElementById('cn'+i).value.trim()||list[i].name;
+  list[i].surveyType=document.getElementById('ct'+i).value.trim();
+  list[i].geoFocus=document.getElementById('cg'+i).value.trim();
+  list[i].guidelines=document.getElementById('cgl'+i).value.trim();
+  list[i].notes=document.getElementById('co'+i).value.trim();
+  list[i].leadsheetUrl=document.getElementById('cls'+i).value.trim();
+  list[i].carriers=document.getElementById('cca'+i).value.split(',').map(x=>x.trim()).filter(Boolean);
+  list[i].scripts={
+    medsup:document.getElementById('cs'+i+'medsup').value.trim(),
+    life:document.getElementById('cs'+i+'life').value.trim(),
+    t65:document.getElementById('cs'+i+'t65').value.trim()
+  };
+  saveCamps(list); fillCampDropdown();
+  const btn=event.target; btn.textContent='✓ Saved'; btn.style.background='var(--green)';
+  setTimeout(()=>{btn.textContent='Save';btn.style.background='';},1500);
+}
+
+function saveAll() {
+  const list=getCamps();
+  list.forEach((_,i)=>{
+    const nameEl=document.getElementById('cn'+i);
+    if(!nameEl) return;
+    list[i].name=nameEl.value.trim()||list[i].name;
+    list[i].surveyType=document.getElementById('ct'+i).value.trim();
+    list[i].geoFocus=document.getElementById('cg'+i).value.trim();
+    list[i].guidelines=document.getElementById('cgl'+i).value.trim();
+    list[i].notes=document.getElementById('co'+i).value.trim();
+    list[i].leadsheetUrl=document.getElementById('cls'+i).value.trim();
+    list[i].carriers=document.getElementById('cca'+i).value.split(',').map(x=>x.trim()).filter(Boolean);
+    list[i].scripts={
+      medsup:document.getElementById('cs'+i+'medsup').value.trim(),
+      life:document.getElementById('cs'+i+'life').value.trim(),
+      t65:document.getElementById('cs'+i+'t65').value.trim()
+    };
+  });
+  saveCamps(list); fillCampDropdown(); closeOM();
+}
+
+function addCamp() {
+  const list=getCamps();
+  list.push({id:'camp_'+Date.now(),name:'New Campaign',surveyType:'',extraDnqs:[],geoFocus:'',requiredFields:[...BASE_REQ],notes:'',leadsheetUrl:'',carriers:[],scripts:{medsup:'',life:'',t65:''},guidelines:''});
+  saveCamps(list); renderOM(); setTimeout(()=>toggleCamp(list.length-1),50);
+}
+
+function delCamp(i) {
+  if(!confirm('Delete this campaign?')) return;
+  const list=getCamps(); list.splice(i,1);
+  saveCamps(list); fillCampDropdown(); renderOM();
+}
+
+function resetCamps() {
+  if(!confirm('Reset all campaigns to defaults? Custom campaigns will be lost.')) return;
+  camps=null; saveCamps(defaultCamps()); fillCampDropdown(); renderOM();
+  const btn=event.target; btn.textContent='✓ Reset!';
+  setTimeout(()=>btn.textContent='↺ Reset to defaults',1500);
+}
+
+// ─── LEADSHEET WRITE & VALIDATION ────────────────────────────────────────────
+async function validateAndWriteLeadsheet(gradePrefix) {
+  const campUrl = ST.activeCamp?.leadsheetUrl || '';
+  if (!campUrl) return;
+
+  const phone = document.getElementById('phoneNum').value.trim().replace(/\D/g, '');
+  if (!phone) return;
+
+  const feedback   = document.getElementById('feedback').value.replace(/\n/g, ' ');
+  const actionPlan = document.getElementById('actionPlan').value.replace(/\n/g, ' ');
+  const noteContent = [gradePrefix, feedback, 'ACTION PLAN: ' + actionPlan]
+    .filter(Boolean).join('  ');
+
+  // Build URL — send call info so GS can compare + highlight mismatches in sheet
+  const ci  = ST.callInfo || {};
+  const params = new URLSearchParams({
+    action:         'validateAndWrite',
+    phone:          phone,
+    note:           noteContent,
+    ci_age:         ci.age            || '',
+    ci_yob:         ci.yob            || '',
+    ci_carrier:     ci.carrier        || '',
+    ci_spouse_age:  ci.spouse_age     || '',
+    ci_spouse_yob:  ci.spouse_yob     || '',
+    ci_spouse_carrier: ci.spouse_carrier || ''
+  });
+
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'display:none;position:absolute;width:1px;height:1px;';
+  iframe.src = campUrl + '?' + params.toString();
+  document.body.appendChild(iframe);
+
+  showLeadsheetStatus('✓ Note sent to leadsheet.', 'var(--green)');
+  setTimeout(() => { try { document.body.removeChild(iframe); } catch(e) {} }, 6000);
+}
+
+function showLeadsheetStatus(msg, color) {
+  const el = document.getElementById('statusMsg');
+  if (!el) return;
+  el.style.color = color;
+  el.textContent = el.textContent + '  |  ' + msg;
+}
+</script>
+</body>
+</html>
