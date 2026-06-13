@@ -1119,6 +1119,7 @@ lbl.innerHTML = '<span class="spinner"></span> Generating notes & extracting cal
 const _combined = await generateNotesAndCallInfo(ST.transcript, camp?.surveyType || '');
   const notes = _combined.notes || '';
   const callInfo = _combined.call_info || null;
+  ST.callInfo = callInfo;
 
 document.getElementById('aiNotes').value = notes;
 document.getElementById('notesCard').style.display = '';
@@ -1657,58 +1658,43 @@ function resetCamps() {
 async function validateAndWriteLeadsheet(gradePrefix) {
   const campUrl = ST.activeCamp?.leadsheetUrl || '';
   if (!campUrl) return;
+
   const phone = document.getElementById('phoneNum').value.trim().replace(/\D/g, '');
   if (!phone) return;
 
   const feedback   = document.getElementById('feedback').value.replace(/\n/g, ' ');
   const actionPlan = document.getElementById('actionPlan').value.replace(/\n/g, ' ');
-  let validation   = 'NOTE VALIDATION: Correct note format.';
-
-  // Attempt lookup (will fail silently on file://)
-  try {
-    const resp = await fetch(campUrl + '?action=lookup&phone=' + encodeURIComponent(phone));
-    if (resp.ok) {
-      const lsData = await resp.json();
-      if (lsData && lsData.found && lsData.row) {
-        // Extract facts from transcript
-        const factRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile', temperature: 0, max_tokens: 200,
-            response_format: {type:'json_object'},
-            messages: [
-              {role:'system', content:'Extract key facts from this call transcript. Return JSON with these exact keys (null if not mentioned): age, birth_year, company, spouse_age, spouse_birth_year, spouse_company'},
-              {role:'user',   content: ST.transcript}
-            ]
-          })
-        });
-        if (factRes.ok) {
-          const facts = JSON.parse((await factRes.json()).choices[0].message.content);
-          const row   = lsData.row;
-          const cmp   = (a,b) => a && b && String(a).trim().toLowerCase() !== String(b).trim().toLowerCase();
-          const mm    = [];
-          if (cmp(facts.age,              row.age))              mm.push('Age: call='+facts.age+', sheet='+row.age);
-          if (cmp(facts.birth_year,       row.birth_year))       mm.push('Birth year: call='+facts.birth_year+', sheet='+row.birth_year);
-          if (cmp(facts.company,          row.company))          mm.push('Company: call='+facts.company+', sheet='+row.company);
-          if (cmp(facts.spouse_age,       row.spouse_age))       mm.push('Spouse age: call='+facts.spouse_age+', sheet='+row.spouse_age);
-          if (cmp(facts.spouse_birth_year,row.spouse_birth_year))mm.push('Spouse birth year: call='+facts.spouse_birth_year+', sheet='+row.spouse_birth_year);
-          if (cmp(facts.spouse_company,   row.spouse_company))   mm.push('Spouse company: call='+facts.spouse_company+', sheet='+row.spouse_company);
-          if (mm.length) validation = 'NOTE VALIDATION: Edit notes — ' + mm.join('; ') + '.';
-        }
-      }
-    }
-  } catch(err) { /* fetch blocked on file:// — skip validation, proceed with write */ }
-
-  const noteContent = [gradePrefix, feedback, 'ACTION PLAN: '+actionPlan, validation]
+  const noteContent = [gradePrefix, feedback, 'ACTION PLAN: ' + actionPlan]
     .filter(Boolean).join('  ');
 
-  // Write via iframe — works on file:// protocol
+  // Build URL — send call info so GS can compare + highlight mismatches in sheet
+  const ci  = ST.callInfo || {};
+  const params = new URLSearchParams({
+    action:         'validateAndWrite',
+    phone:          phone,
+    note:           noteContent,
+    ci_age:         ci.age            || '',
+    ci_yob:         ci.yob            || '',
+    ci_carrier:     ci.carrier        || '',
+    ci_spouse_age:  ci.spouse_age     || '',
+    ci_spouse_yob:  ci.spouse_yob     || '',
+    ci_spouse_carrier: ci.spouse_carrier || ''
+  });
+
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'display:none;position:absolute;width:1px;height:1px;';
-  iframe.src = campUrl+'?action=write&phone='+encodeURIComponent(phone)+'&note='+encodeURIComponent(noteContent);
+  iframe.src = campUrl + '?' + params.toString();
   document.body.appendChild(iframe);
-  setTimeout(()=>{ try{document.body.removeChild(iframe);}catch(e){} }, 6000);
+
+  showLeadsheetStatus('✓ Note sent to leadsheet.', 'var(--green)');
+  setTimeout(() => { try { document.body.removeChild(iframe); } catch(e) {} }, 6000);
+}
+
+function showLeadsheetStatus(msg, color) {
+  const el = document.getElementById('statusMsg');
+  if (!el) return;
+  el.style.color = color;
+  el.textContent = el.textContent + '  |  ' + msg;
 }
 </script>
 </body>
