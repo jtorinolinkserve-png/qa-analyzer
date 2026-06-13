@@ -352,7 +352,22 @@ textarea:focus{border-color:var(--maroon)}
 // ─── CONFIG ────────────────────────────────────────────────────────────────────
 const GROQ_KEY_DEFAULT = '';
 
-let groqKey = localStorage.getItem('groq_key') || GROQ_KEY_DEFAULT;
+// Round-robin key rotation — keys stored in localStorage as JSON array
+function getNextKey() {
+  let keys = [];
+  try { keys = JSON.parse(localStorage.getItem('tmd_groq_keys') || '[]'); } catch(_) {}
+  // Fall back to legacy single-key if no array set
+  if (!keys.length) {
+    const single = localStorage.getItem('groq_key') || GROQ_KEY_DEFAULT;
+    return single;
+  }
+  let idx = parseInt(localStorage.getItem('tmd_groq_key_idx') || '0');
+  const key = keys[idx % keys.length];
+  localStorage.setItem('tmd_groq_key_idx', (idx + 1) % keys.length);
+  return key;
+}
+// Keep groqKey as alias for legacy references (Whisper call)
+Object.defineProperty(window, 'groqKey', { get: getNextKey });
 
 const OM_PASS = 'Linkserve123_';
 const SHEET_ID = '1Lx0ajz26zq-ABUEQlMMvQwTcoFCBz5YBwCZqSvUIa_Q';
@@ -590,7 +605,7 @@ async function separateSpeakers(rawTranscript) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + groqKey
+      'Authorization': 'Bearer ' + getNextKey()
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
@@ -828,7 +843,7 @@ async function generateNotesAndCallInfo(transcript, surveyType) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + groqKey
+        'Authorization': 'Bearer ' + getNextKey()
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
@@ -1104,7 +1119,7 @@ async function runAnalysis() {
     fd.append('model','whisper-large-v3');
     fd.append('response_format','verbose_json');
     const tr = await fetch('https://api.groq.com/openai/v1/audio/transcriptions',{
-      method:'POST', headers:{'Authorization':'Bearer '+groqKey}, body:fd
+      method:'POST', headers:{'Authorization':'Bearer '+getNextKey()}, body:fd
     });
     if (!tr.ok) { const e=await tr.json(); throw new Error(e.error?.message||'Transcription failed'); }
     ST.transcript = (await tr.json()).text || '';
@@ -1147,7 +1162,7 @@ document.getElementById('notesCard').style.display = '';
 
     const ar = await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+getNextKey()},
       body:JSON.stringify({
         model:'llama-3.3-70b-versatile', max_tokens:1200, temperature:0.2,
         response_format:{type:'json_object'},
@@ -1459,6 +1474,7 @@ document.getElementById('notesCard').style.display = 'none';
 
 // ─── OM PANEL ─────────────────────────────────────────────────────────────────
 function openOM() {
+  loadKeyInput();
   document.getElementById('overlay').classList.add('open');
   if (!omOpen) {
     document.getElementById('pwBox').style.display='';
@@ -1487,15 +1503,29 @@ function checkPW() {
 function lockOM() { omOpen=false; closeOM(); }
 
 function updateKey() {
-  const k=document.getElementById('keyInput').value.trim();
-  if (!k) { alert('Please enter a valid key.'); return; }
+  const raw = document.getElementById('keyInput').value;
+  const keys = raw.split(/\n/).map(k => k.trim()).filter(k => k.startsWith('gsk_'));
+  if (!keys.length) { alert('No valid keys found. Each key should start with gsk_'); return; }
 
-  groqKey=k;
-  localStorage.setItem('groq_key', k);
+  localStorage.setItem('tmd_groq_keys', JSON.stringify(keys));
+  localStorage.setItem('tmd_groq_key_idx', '0');  // reset rotation
 
-  const m=document.getElementById('keySavedMsg');
-  m.style.display='inline';
-  setTimeout(()=>m.style.display='none',2000);
+  const m = document.getElementById('keySavedMsg');
+  const c = document.getElementById('keyCountMsg');
+  m.style.display = 'inline';
+  if (c) c.textContent = keys.length + ' key' + (keys.length > 1 ? 's' : '') + ' active';
+  setTimeout(() => m.style.display = 'none', 2000);
+}
+
+function loadKeyInput() {
+  try {
+    const keys = JSON.parse(localStorage.getItem('tmd_groq_keys') || '[]');
+    if (keys.length) {
+      document.getElementById('keyInput').value = keys.join('\n');
+      const c = document.getElementById('keyCountMsg');
+      if (c) c.textContent = keys.length + ' key' + (keys.length > 1 ? 's' : '') + ' active';
+    }
+  } catch(_) {}
 }
 
 function updateScriptUrl() {
