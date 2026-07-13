@@ -353,6 +353,7 @@ textarea:focus{border-color:var(--maroon)}
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────────
 const GROQ_KEY_DEFAULT = '';
+const GROQ_TEXT_MODEL = 'openai/gpt-oss-120b'; // Replacement for deprecated llama-3.3-70b-versatile
 // Round-robin key rotation — keys stored in localStorage as JSON array
 function getNextKey() {
   let keys = [];
@@ -624,7 +625,7 @@ async function separateSpeakers(rawTranscript) {
       'Authorization': 'Bearer ' + key
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       max_tokens: 2200,
       temperature: 0,
       messages: [
@@ -880,7 +881,7 @@ async function generateNotesAndCallInfo(transcript, surveyType) {
         'Authorization': 'Bearer ' + key
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_TEXT_MODEL,
         temperature: 0,
         max_tokens: 1000,
     response_format: {type:'json_object'},
@@ -1226,7 +1227,7 @@ document.getElementById('notesCard').style.display = '';
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
       body:JSON.stringify({
-        model:'llama-3.3-70b-versatile', max_tokens:1200, temperature:0.2,
+        model: GROQ_TEXT_MODEL, max_tokens:1200, temperature:0.2,
         response_format:{type:'json_object'},
         messages:[{
           role:'system',
