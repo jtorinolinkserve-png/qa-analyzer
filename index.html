@@ -883,7 +883,7 @@ async function generateNotesAndCallInfo(transcript, surveyType) {
       body: JSON.stringify({
         model: GROQ_TEXT_MODEL,
         temperature: 0,
-        max_tokens: 1000,
+        max_tokens: 1800,
     response_format: {type:'json_object'},
         messages: [
           {
@@ -1148,24 +1148,64 @@ call_info rules:
   );
 
   if (!res.ok) {
-    let errMsg = 'Notes generation failed';
-    try { const e = await res.json(); errMsg = e.error?.message || errMsg; } catch(_) {}
-    throw new Error(errMsg);
+    let errorData = null;
+
+    try {
+      errorData = await res.json();
+    } catch (parseError) {
+      console.error('Unable to parse Groq error response:', parseError);
+    }
+
+    console.error('Groq notes-generation error:', errorData);
+    console.error(
+      'Failed generation:',
+      errorData?.error?.failed_generation || 'Not provided'
+    );
+
+    throw new Error(
+      errorData?.error?.failed_generation ||
+      errorData?.error?.message ||
+      'Notes generation failed'
+    );
   }
 
   const data = await res.json();
+  console.log('Groq notes-generation response:', data);
+
   try {
-    const parsed = JSON.parse(data.choices[0].message.content);
+    const rawContent = data.choices?.[0]?.message?.content || '';
+    const cleanedContent = rawContent
+      .replace(/```json|```/gi, '')
+      .trim();
+
+    const parsed = JSON.parse(cleanedContent);
     let notes = sanitizeNotes((parsed.notes || '').trim());
     const ci = parsed.call_info || null;
+
     // If AI flagged a DNC refusal, strip any "Agreed to receive" sentence the model snuck in
     if (ci && ci.agreed_to_followup === false) {
-      notes = notes.replace(/\s*Agreed to receive a call from our (Medicare|Life) specialist\./gi, '').trim();
+      notes = notes
+        .replace(/\s*Agreed to receive a call from our (Medicare|Life) specialist\./gi, '')
+        .trim();
     }
+
     return { notes, call_info: ci };
-  } catch(e) {
-    // Fallback: model returned plain text instead of JSON — treat as notes only
-    return { notes: sanitizeNotes(data.choices[0].message.content.trim()), call_info: null };
+
+  } catch (parseError) {
+    const rawContent = data.choices?.[0]?.message?.content || '';
+
+    console.error('JSON parse failed:', parseError);
+    console.error('Raw model response:', rawContent);
+
+    // Fallback: use the returned content as notes so the whole analysis does not stop.
+    return {
+      notes: sanitizeNotes(
+        rawContent
+          .replace(/```json|```/gi, '')
+          .trim()
+      ),
+      call_info: null
+    };
   }
 }
 async function runAnalysis() {
