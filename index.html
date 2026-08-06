@@ -1208,6 +1208,73 @@ call_info rules:
     };
   }
 }
+
+function parseAIJson(rawContent) {
+  if (!rawContent || typeof rawContent !== 'string') {
+    throw new Error('Empty AI response');
+  }
+
+  let cleaned = rawContent
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error('No complete JSON object found');
+  }
+
+  cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (firstError) {
+    const repaired = cleaned
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/[\u0000-\u001F]+/g, ' ');
+
+    try {
+      return JSON.parse(repaired);
+    } catch (secondError) {
+      console.error('Original JSON parse error:', firstError);
+      console.error('Repaired JSON parse error:', secondError);
+      console.error('Raw AI response:', rawContent);
+      throw new Error('Invalid or incomplete JSON returned by the AI');
+    }
+  }
+}
+
+function normalizeAnalysisResult(analysis) {
+  if (!analysis || typeof analysis !== 'object') {
+    throw new Error('The AI response is not a valid analysis object.');
+  }
+
+  if (!analysis.scores || typeof analysis.scores !== 'object') {
+    throw new Error('The AI response did not include QA scores.');
+  }
+
+  const normalizedScores = {};
+  CRITERIA.forEach(c => {
+    const raw = Number(analysis.scores[c.id]);
+    normalizedScores[c.id] = Number.isFinite(raw)
+      ? Math.min(5, Math.max(0, Math.round(raw)))
+      : 0;
+  });
+
+  return {
+    scores: normalizedScores,
+    dnq_flags: Array.isArray(analysis.dnq_flags) ? analysis.dnq_flags : [],
+    callback_flags: Array.isArray(analysis.callback_flags) ? analysis.callback_flags : [],
+    geo_flags: Array.isArray(analysis.geo_flags) ? analysis.geo_flags : [],
+    feedback: typeof analysis.feedback === 'string' ? analysis.feedback : '',
+    action_plan: typeof analysis.action_plan === 'string' ? analysis.action_plan : ''
+  };
+}
+
 async function runAnalysis() {
   if (!ST.file) { alert('Please upload a recording first.'); return; }
   const btn = document.getElementById('analyzeBtn');
@@ -1267,7 +1334,7 @@ document.getElementById('notesCard').style.display = '';
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
       body:JSON.stringify({
-        model: GROQ_TEXT_MODEL, max_tokens:1200, temperature:0.2,
+        model: GROQ_TEXT_MODEL, max_tokens:1800, temperature:0.2,
         response_format:{type:'json_object'},
         messages:[{
           role:'system',
@@ -1362,7 +1429,16 @@ Return ONLY:
     }));
     if (!ar.ok) { const e=await ar.json(); throw new Error(e.error?.message||'Analysis failed'); }
     const aData = await ar.json();
-    const analysis = JSON.parse(aData.choices[0].message.content.replace(/```json|```/g,'').trim());
+    const rawAnalysis = aData.choices?.[0]?.message?.content || '';
+
+    let analysis;
+    try {
+      analysis = normalizeAnalysisResult(parseAIJson(rawAnalysis));
+    } catch (jsonError) {
+      console.error('QA JSON parsing failed:', jsonError);
+      console.error('Raw QA response:', rawAnalysis);
+      throw new Error('The AI returned an invalid or incomplete QA result. Please run the analysis again.');
+    }
 
     applyAI(analysis.scores);
     ST.dnqFlags = analysis.dnq_flags||[];
