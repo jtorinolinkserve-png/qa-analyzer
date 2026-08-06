@@ -386,6 +386,57 @@ async function groqFetch(url, buildOptions, maxRetries) {
   throw new Error(lastErr || 'All keys rate limited');
 }
 
+// JSON-mode fallback: Groq may occasionally reject a generation before returning it
+// with "Failed to validate JSON". Retry once without response_format, then parse
+// and validate the returned object in the browser.
+async function groqJsonFetch(url, buildOptions, maxRetries) {
+  const firstResponse = await groqFetch(url, buildOptions, maxRetries);
+  if (firstResponse.ok) return firstResponse;
+
+  let errorData = null;
+  try { errorData = await firstResponse.clone().json(); } catch (_) {}
+
+  const errorText = [
+    errorData?.error?.message,
+    errorData?.error?.code,
+    errorData?.error?.failed_generation
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const isJsonValidationFailure =
+    firstResponse.status === 400 &&
+    (errorText.includes('failed to validate json') ||
+     errorText.includes('failed_generation') ||
+     errorText.includes('json validation'));
+
+  if (!isJsonValidationFailure) return firstResponse;
+
+  console.warn('[groqJsonFetch] Groq JSON validation failed. Retrying in plain-text JSON mode.');
+
+  return groqFetch(url, key => {
+    const opts = buildOptions(key);
+    let body = {};
+
+    try { body = JSON.parse(opts.body || '{}'); } catch (_) {}
+    delete body.response_format;
+    body.temperature = 0;
+
+    if (Array.isArray(body.messages)) {
+      const reminder = 'Return exactly one complete valid JSON object. Do not use markdown fences or add any text outside the JSON object.';
+      const systemIndex = body.messages.findIndex(m => m.role === 'system');
+      if (systemIndex >= 0) {
+        body.messages[systemIndex] = {
+          ...body.messages[systemIndex],
+          content: String(body.messages[systemIndex].content || '') + '\n\n' + reminder
+        };
+      } else {
+        body.messages.unshift({ role: 'system', content: reminder });
+      }
+    }
+
+    return { ...opts, body: JSON.stringify(body) };
+  }, maxRetries);
+}
+
 const OM_PASS = 'Linkserve123_';
 const SHEET_ID = '1Lx0ajz26zq-ABUEQlMMvQwTcoFCBz5YBwCZqSvUIa_Q';
 let APPS_SCRIPT_URL = localStorage.getItem('tmd_script_url') || 'https://script.google.com/macros/s/AKfycbz8A1nIpzvJBjxje8YPf86i3OA6SLO-FViVrkevFHpwFDegQ65fE5sq1isgvRkbLR0dJQ/exec';
@@ -872,7 +923,7 @@ function sanitizeNotes(raw) {
 }
 
 async function generateNotesAndCallInfo(transcript, surveyType) {
-  const res = await groqFetch(
+  const res = await groqJsonFetch(
     'https://api.groq.com/openai/v1/chat/completions',
     key => ({
       method: 'POST',
@@ -1330,7 +1381,7 @@ document.getElementById('notesCard').style.display = '';
     const carrierList = camp?.carriers?.length ? camp.carriers : ['AARP','UnitedHealthcare','Aetna','BCBS','Cigna','Humana','Mutual of Omaha','Transamerica','Bankers Life','Colonial Penn','Globe Life','Physicians Mutual','Prudential','MetLife','State Farm'];
     const campName = camp?.name||document.getElementById('campSelect').options[document.getElementById('campSelect').selectedIndex]?.text||'Not specified';
 
-    const ar = await groqFetch('https://api.groq.com/openai/v1/chat/completions', key => ({
+    const ar = await groqJsonFetch('https://api.groq.com/openai/v1/chat/completions', key => ({
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
       body:JSON.stringify({
@@ -1461,8 +1512,17 @@ Return ONLY:
     btn.disabled=false;
 
   } catch(err) {
-    btn.disabled=false; lbl.textContent='Transcribe & Analyze';
-    alert('Error: '+err.message);
+    btn.disabled=false;
+    lbl.textContent='Transcribe & Analyze';
+
+    const message = String(err?.message || err || 'Unknown error');
+    const isJsonError = /failed to validate json|failed_generation|json/i.test(message);
+
+    if (isJsonError) {
+      alert('The AI could not complete a valid result after retrying. Please click Transcribe & Analyze again. Your uploaded recording is still available.');
+    } else {
+      alert('Error: ' + message);
+    }
   }
 }
 
